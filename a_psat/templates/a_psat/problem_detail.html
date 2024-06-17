@@ -1,0 +1,8 @@
+{% extends '_base.html' %}
+{% load psat_templatetags %}
+
+{% block layout %}
+    {% with hide_hero=True %}{% include '_includes/_hero.html' %}{% endwith %}
+
+    {% include 'a_psat/problem_detail_content.html' %}
+{% endblock layout %}

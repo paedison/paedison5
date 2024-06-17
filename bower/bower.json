@@ -1,0 +1,21 @@
+{
+  "name": "paedison",
+  "authors": [
+    "paedison <paedison@gmail.com>"
+  ],
+  "description": "paedison.com",
+  "main": "",
+  "license": "MIT",
+  "homepage": "paedison.com",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "select2": "~4.0"
+  }
+}

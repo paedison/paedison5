@@ -1,0 +1,17 @@
+#changelist-filter {
+    flex: 0 0 120px;
+}
+
+.field-id, .field-year, .field-ex, .field-sub, .field-number, .field-answer {
+    white-space: nowrap;
+    word-break: keep-all;
+    text-wrap: none;
+    text-align: center;
+    overflow: hidden;
+}
+.field-question {
+    white-space: nowrap;
+    word-break: keep-all;
+    text-wrap: none;
+    overflow: hidden;
+}
