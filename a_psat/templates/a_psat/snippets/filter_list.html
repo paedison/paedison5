@@ -50,8 +50,11 @@
                 {% endif %}
             {% endfor %}
 
+            {% if not user.is_authenticated %}
+            <div class="tw-col-span-full">
+            {% endif %}
             <select id="id_page" name="page" class="form-select form-select-sm filter_selected"
-                    hx-target="#aside" hx-swap="innerHTML swap:0.25s"
+                    hx-target="#aside-group" hx-swap="innerHTML swap:0.25s"
                     hx-get="{% url 'psat:problem-list-filter' %}">
                 {% for p in elided_page_range %}
                     {% if p == '…' %}
@@ -63,6 +66,9 @@
                     {% endif %}
                 {% endfor %}
             </select>
+            {% if not user.is_authenticated %}
+            </div>
+            {% endif %}
         </form>
     </card-body>
 </section>

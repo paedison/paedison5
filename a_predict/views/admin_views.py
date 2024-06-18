@@ -1,7 +1,7 @@
 from django.utils import timezone
 from django.views import generic
 
-from .normal_views import IndexView
+from .normal_views_old import IndexView
 from a_predict.utils import get_all_score_stat_sub_dict
 from .viewmixins import admin_view_mixins, base_mixins
 

@@ -1,9 +1,5 @@
 {% load psat_templatetags %}
 
-{% if request.htmx %}
-    {% with hide_hero=True %}{% include '_includes/_hero.html' %}{% endwith %}
-{% endif %}
-
 <content id="content"
          class="htmx-fade-in htmx-fade-out tw-grid tw-grid-cols-4 tw-mt-[60px] xl:tw-grid-cols-6">
     <filter id="aside-group"

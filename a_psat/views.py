@@ -46,7 +46,6 @@ def problem_list_view(request: common_utils.HtmxHttpRequest, tag=None):
         if request.headers.get('Open-First-Page') != 'true':
             context = common_utils.update_context_data(
                 context, show_first_page=False, show_next_page=True)
-        return render(request, 'a_psat/problem_list_content.html', context)
     return render(request, 'a_psat/problem_list.html', context)
 
 
@@ -94,8 +93,6 @@ def problem_detail_view(request: common_utils.HtmxHttpRequest, pk: int | None = 
         comment_form=comment_form,
         reply_form=reply_form,
     )
-    if request.htmx:
-        return render(request, 'a_psat/problem_detail_content.html', context)
     return render(request, 'a_psat/problem_detail.html', context)
 
 

@@ -2,7 +2,7 @@
 {% load psat_templatetags %}
 
 {% block layout %}
-    {% with hide_hero=True %}{% include '_includes/_hero.html' %}{% endwith %}
+    <hero id="hero" hx-swap-oob="true"></hero>
 
     {% include 'a_psat/problem_detail_content.html' %}
 {% endblock layout %}

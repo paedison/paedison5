@@ -1,0 +1,184 @@
+{% extends 'a_predict/_base.html' %}
+{% load static %}
+{% load i18n %}
+{% load partials %}
+{% load slippers %}
+
+{% block main %}
+    {{ info|json_script:'info' }}
+
+    <article class="card tw-place-self-start"
+             hx-target="#content" hx-swap="outerHTML swap:0.25s" hx-push-url="true">
+        <div class="card-body text-center p-4">
+            <div class="container d-sm-none my-4">
+                <p>수험생 여러분,<br/>그 동안 수고 많으셨습니다.</p>
+                <p>여러분의 합격을<br/>기원하는 마음과 함께<br/>
+                    아래와 같이 합격예측시스템을<br/>제공해드리고 있습니다.</p>
+                <p>모집단위와 직렬 및 응시번호,<br/>이름을 입력하신 뒤,<br/>
+                    과목별 시험 답안을 제출해주시면<br/>집계 후 여러분의<br/>
+                    합격 여부를 예측해드립니다.</p>
+            </div>
+            <div class="container d-none d-sm-block my-4">
+                <p>수험생 여러분, 그 동안 수고 많으셨습니다.</p>
+                <p>여러분의 합격을 기원하는 마음과 함께</p>
+                <p>아래와 같이 합격예측시스템을 제공해드리고 있습니다.</p>
+                <p>모집단위와 직렬 및 응시번호, 이름을 입력하신 뒤,</p>
+                <p>과목별 시험 답안을 제출해주시면 집계 후</p>
+                <p>여러분의 합격 여부를 예측해드립니다.</p>
+            </div>
+        </div>
+    </article>
+
+    <article class="card tw-place-self-start" hx-target="#content" hx-swap="outerHTML swap:0.25s">
+        <div id="info_student" class="htmx-fade-in htmx-fade-out">
+            {% partial info_student %}
+        </div>
+    </article>
+{% endblock main %}
+
+{% partialdef info_student %}
+    <div class="card-header">수험정보</div>
+
+    <div class="card-body">
+        {% if current_time < exam.page_opened_at %}
+            <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                    수험정보는 {{ exam.page_opened_at|date:'n/d(D) H:i' }}부터 입력 가능합니다.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% else %}
+            <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                    수험정보를 입력해주세요.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <form>
+                {% if exam == '프모' %}
+                    {# 모집 단위 및 직렬 #}
+                    {% component "component_tabs" %}
+                        {% fill "component_code" %}
+                            {% component "parent_select_cascading_selects" %}{% endcomponent %}
+                        {% endfill %}
+                    {% endcomponent %}
+{#                    <input name="unit_id" value="11" aria-label="Unit ID" hidden/>#}
+{#                    {% partialdef student_create_department inline=True %}#}
+{#                        <select id="id_department" class="form-select mt-3"#}
+{#                                name="department_id" aria-label="Select department">#}
+{#                            <option value="" selected>직렬을 선택해주세요.</option>#}
+{#                            {% for department in departments %}#}
+{#                                <option value="{{ department.id }}">{{ department.name }}</option>#}
+{#                            {% endfor %}#}
+{#                        </select>#}
+{#                    {% endpartialdef student_create_department %}#}
+{#                    {% if form.errors.department_id %}#}
+{#                        <div class="text-danger text-start fw-bold">직렬을 선택해주세요.</div>#}
+{#                    {% endif %}#}
+
+                    {# 응시번호 #}
+                    {% partialdef serial inline=True %}
+                        <div class="form-floating">
+                            <input id="id_serial" class="form-control form-control-sm mt-3"
+                                   type="text" placeholder="응시번호" name="serial"
+                                   value="{{ form.serial.value|default:'' }}"/>
+                            <label for="id_serial">응시번호</label>
+                        </div>
+                        {% if form.errors.serial %}
+                            <div class="text-danger text-start fw-bold">응시번호를 입력해주세요.</div>
+                        {% endif %}
+                    {% endpartialdef %}
+
+                    {# 이름 #}
+                    <div class="input-group mt-3">
+                        <div class="form-floating">
+                            <input id="id_name" class="form-control form-control-sm"
+                                   type="text" placeholder="이름" name="name"
+                                   value="{{ form.name.value|default:'' }}"/>
+                            <label for="id_name">이름</label>
+                        </div>
+                    </div>
+                    {% if form.errors.name %}
+                        <div class="text-danger text-start fw-bold">이름을 입력해주세요.</div>
+                    {% endif %}
+
+                    {# 비밀번호 #}
+                    <div class="input-group mt-3">
+                        <div class="form-floating">
+                            <input id="id_password" class="form-control form-control-sm"
+                                   type="text" placeholder="비밀번호" name="password"
+                                   value="{{ form.password.value|default:'' }}"/>
+                            <label for="id_password">비밀번호</label>
+                        </div>
+                        {% partialdef form_submit inline=True %}
+                            <button class="btn btn-outline-secondary" type="submit" hx-target="#main"
+                                    hx-post="">
+                                입력
+                            </button>
+                        {% endpartialdef form_submit %}
+                    </div>
+                    {% if form.errors.password %}
+                        <div class="text-danger text-start fw-bold">비밀번호를 입력해주세요.</div>
+                    {% endif %}
+                {% else %}
+                    {# 모집 단위 및 직렬 #}
+                    {% component "parent_select_cascading_selects" %}{% endcomponent %}
+
+{#                    <select id="id_unit" class="form-select mt-3" name="unit_id" aria-label="Select unit"#}
+{#                            hx-post="" hx-push-url="false"#}
+{#                            hx-trigger="change" hx-target="#student_create_department">#}
+{#                        <option value="">모집 단위를 선택해주세요.</option>#}
+{#                        {% for unit in units %}#}
+{#                            <option value="{{ unit.id }}">{{ unit.name }}</option>#}
+{#                        {% endfor %}#}
+{#                    </select>#}
+{#                    <div id="student_create_department" class="input-group"></div>#}
+{#                    {% if form.errors.unit_id or form.errors.department_id %}#}
+{#                        <div class="text-danger text-start fw-bold">모집 단위 및 직렬을 선택해주세요.</div>#}
+{#                    {% endif %}#}
+
+                    {# 응시번호 #}
+                    {% partial serial %}
+
+                    {# 비밀번호 #}
+                    <input name="password" value="0" aria-label="password" hidden/>
+
+                    {# 이름 #}
+                    <div class="input-group mt-3">
+                        <div class="form-floating">
+                            <input id="id_name" class="form-control form-control-sm"
+                                   type="text" placeholder="이름" name="name"
+                                   value="{{ form.name.value|default:'' }}"/>
+                            <label for="id_name">이름</label>
+                        </div>
+                    </div>
+                    {% if form.errors.name %}
+                        <div class="text-danger text-start fw-bold">
+                            이름을 입력해주세요.
+                        </div>
+                    {% endif %}
+
+                    {# 프라임법학원 ID #}
+                    <div class="input-group mt-3">
+                        <div class="form-floating">
+                            <input id="id_prime_id" class="form-control form-control-sm"
+                                   type="text" placeholder="프라임법학원 ID" name="prime_id"
+                                   value="{{ form.prime_id.value|default:'' }}"/>
+                            <label for="id_prime_id">프라임법학원 ID (선택사항)</label>
+                        </div>
+                        {% partial form_submit %}
+                    </div>
+                {% endif %}
+            </form>
+            <div class="mt-3">
+                <span class="badge bg-danger"><i class="fa-regular fa-circle-check"></i> 참고</span>
+                <ol class="text-danger small fw-bold m-0">
+                    <li>입력하신 수험정보는 변경 및 삭제가 불가하니 주의하시기 바랍니다.</li>
+                    <li>프라임법학원 ID를 입력해주시면 쿠폰 이벤트에 자동 응모됩니다(선택사항).</li>
+                    <li>프라임법학원 쿠폰 이벤트에 관한 보다 자세한 내용은
+                        <a href="https://renew.primeedunet.com/psat/examInfo?tab=academy_notice&seq=18520"
+                           target="_blank">여기</a>를 참고해주세요.
+                    </li>
+                </ol>
+            </div>
+        {% endif %}
+    </div>
+{% endpartialdef info_student %}

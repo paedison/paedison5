@@ -14,6 +14,8 @@ urlpatterns = [
     path('admin/', include('admin_honeypot.urls', namespace='admin_honeypot')),
     path('check_in_as_boss/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
+    path('components/', include('components.urls')),
+
     path('psat/', include('a_psat.urls')),
     path('police/', include('a_police.urls')),
     path('predict/', include('a_predict.urls')),

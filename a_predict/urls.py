@@ -1,24 +1,45 @@
 from django.urls import path, include
 
-from .views import normal_views, admin_views
+from .views import normal_views, normal_views_old, admin_views
 
 app_name = 'predict'
 
 normal_patterns = [
     path('', normal_views.index_view, name='index'),
-    path('test/', normal_views.index_test_view, name='index_test'),
-    path('student/', normal_views.student_create_view, name='student_create'),
+    # path('test/', normal_views.index_test_view, name='index_test'),
+    #
+    # path('answer/<str:sub>/', normal_views.answer_input_view, name='answer_input'),
+    # path('answer/<str:sub>/submit/', normal_views.answer_submit_view, name='answer_submit'),
+    # path('answer/<str:sub>/confirm/', normal_views.answer_confirm_view, name='answer_confirm'),
+    #
+    # path('update/info_answer/', normal_views.update_info_answer, name='update_info_answer'),
+    # path('update/sheet_answer_predict/', normal_views.update_sheet_answer_predict, name='update_sheet_answer_predict'),
+    # path('update/sheet_answer/', normal_views.update_sheet_answer, name='update_sheet_answer'),
+    # path('update/sheet_score/', normal_views.update_sheet_score, name='update_sheet_score'),
+]
+
+student_patterns = [
+    path('anonymous/', normal_views.student_anonymous_view, name='student-anonymous'),
+    path('create/', normal_views.student_create_view, name='student-create'),
+    # path('student/department/',
+    #      normal_views.student_create_department, name='student_create_department'),
+]
+
+old_normal_patterns = [
+    path('', normal_views_old.index_view, name='index'),
+    path('test/', normal_views_old.index_test_view, name='index_test'),
+    path('student/', normal_views_old.student_create_view, name='student_create'),
     path('student/department/',
-         normal_views.student_create_department, name='student_create_department'),
+         normal_views_old.student_create_department, name='student_create_department'),
 
-    path('answer/<str:sub>/', normal_views.answer_input_view, name='answer_input'),
-    path('answer/<str:sub>/submit/', normal_views.answer_submit_view, name='answer_submit'),
-    path('answer/<str:sub>/confirm/', normal_views.answer_confirm_view, name='answer_confirm'),
+    path('answer/<str:sub>/', normal_views_old.answer_input_view, name='answer_input'),
+    path('answer/<str:sub>/submit/', normal_views_old.answer_submit_view, name='answer_submit'),
+    path('answer/<str:sub>/confirm/', normal_views_old.answer_confirm_view, name='answer_confirm'),
 
-    path('update/info_answer/', normal_views.update_info_answer, name='update_info_answer'),
-    path('update/sheet_answer_predict/', normal_views.update_sheet_answer_predict, name='update_sheet_answer_predict'),
-    path('update/sheet_answer/', normal_views.update_sheet_answer, name='update_sheet_answer'),
-    path('update/sheet_score/', normal_views.update_sheet_score, name='update_sheet_score'),
+    path('update/info_answer/', normal_views_old.update_info_answer, name='update_info_answer'),
+    path('update/sheet_answer_predict/', normal_views_old.update_sheet_answer_predict, name='update_sheet_answer_predict'),
+    path('update/sheet_answer/', normal_views_old.update_sheet_answer, name='update_sheet_answer'),
+    path('update/sheet_score/', normal_views_old.update_sheet_score, name='update_sheet_score'),
 ]
 
 admin_patterns = [
@@ -69,5 +90,7 @@ admin_patterns = [
 
 urlpatterns = [
     path('', include(normal_patterns)),
+    path('student/', include(student_patterns)),
+    path('old/', include(old_normal_patterns)),
     path('admin/', include(admin_patterns)),
 ]

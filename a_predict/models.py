@@ -35,10 +35,10 @@ def get_remarks(message_type: str, remarks: str | None) -> str:
 
 
 class ExamChoice(models.TextChoices):
-    HAENGSI = '행시', '5급공채/행정고시'
+    HAENGSI = '행시', '5급공채(행정·기술)/외교원/지역인재 7급'
     IPSI = '입시', '입법고시'
-    CHILGEUP = '칠급', '7급공채'
-    PRIME = '프모', '프라임모의고사'
+    CHILGEUP = '칠급', '7급공채 국가직(행정·기술)/민간경력 5·7급'
+    PRIME = '프모', '프라임 모의고사'
 
 
 class SubjectChoice(models.TextChoices):
@@ -89,7 +89,7 @@ class TimeChoiceBase(TimeRecordField, ChoiceMethod):
 
 
 class Exam(TimeRemarkChoiceBase):
-    exam = models.CharField(max_length=2, choices=ExamChoice)
+    exam = models.CharField(max_length=2, choices=ExamChoice, unique=True)
 
     page_opened_at = models.DateTimeField(default=timezone.now)
     exam_started_at = models.DateTimeField(default=timezone.now)
@@ -102,11 +102,26 @@ class Exam(TimeRemarkChoiceBase):
     #     return os.path.join(data_dir, f"answer_file_{self.category}_{self.year}{self.ex}-{self.round}.csv")
 
 
+class Unit(TimeRemarkChoiceBase):
+    exam = models.CharField(max_length=2, choices=ExamChoice)
+    unit = models.CharField(max_length=128)
+    order = models.IntegerField()
+
+    class Meta:
+        unique_together = ['exam', 'unit']
+
+    def __str__(self):
+        return f'{self.unit}'
+
+
 class Department(TimeRemarkChoiceBase):
     exam = models.CharField(max_length=2, choices=ExamChoice)
     unit = models.CharField(max_length=128)
     department = models.CharField(max_length=128)
     order = models.IntegerField()
+
+    class Meta:
+        unique_together = ['exam', 'unit', 'department']
 
     def __str__(self):
         return f'{self.unit}-{self.department}'
