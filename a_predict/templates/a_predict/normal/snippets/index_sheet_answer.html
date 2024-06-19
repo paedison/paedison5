@@ -1,11 +1,10 @@
-{% load psat_filter %}
 {% load partials %}
 {% load slippers %}
 
 <div class="card-header">
     정답 확인
     <a class="text-decoration-none ms-2" href="" hx-swap="none" hx-indicator="#sheet_answer_spinner"
-       hx-get="{% url 'predict_test:update_sheet_answer' %}">
+       hx-get="">
         <span class="badge rounded-pill text-bg-warning">업데이트</span>
     </a>
     <div id="sheet_answer_spinner" role="status"
@@ -20,7 +19,16 @@
             {% for id in '0123' %}
                 {% cycle '헌법' '언어' '자료' '상황' as sub silent %}
                 {% cycle icon_subject.헌법|safe icon_subject.언어|safe icon_subject.자료|safe icon_subject.상황|safe as icon silent %}
-                {% #nav_tab prefix=sub id=id %}{{ icon }} {{ sub }}{% /nav_tab %}
+                <button id="navTab{{ sub }}{{ id }}"
+                        class="nav-link p-2{% if id == '0' %} active{% endif %}"
+                        type="button" role="tab" data-bs-toggle="tab"
+                        data-bs-target="#navContent{{ prefix }}{{ id }}"
+                        aria-controls="navContent{{ prefix }}{{ id }}"
+                        aria-selected="{% if id == '0' %}true{% else %}false{% endif %}">
+                    <span class="fw-bold">
+                        {{ icon }} {{ sub }}
+                    </span>
+                </button>
             {% endfor %}
         </div>
     </nav>
@@ -31,7 +39,11 @@
             {% cycle data_answer_correct.헌법 data_answer_correct.언어 data_answer_correct.자료 data_answer_correct.상황 as answer_correct silent %}
             {% cycle data_answer_student.헌법 data_answer_student.언어 data_answer_student.자료 data_answer_student.상황 as answer_student silent %}
             {% cycle info_answer_student.헌법 info_answer_student.언어 info_answer_student.자료 info_answer_student.상황 as info_answer silent %}
-            {% #nav_content prefix=sub id=id %}{% partial answer_table %}{% /nav_content %}
+            <div id="navContent{{ sub }}{{ id }}"
+                 class="tab-pane fade{% if id == '0' %} show active{% endif %} htmx-fade-out"
+                 role="tabpanel" aria-labelledby="navTab{{ sub }}{{ id }}">
+                {% partial answer_table %}
+            </div>
         {% endfor %}
     </div>
     <div>
@@ -54,7 +66,7 @@
                     <tr class="text-center">
                         <th>
                             <a class="btn btn-outline-danger my-4"
-                               href="{% url 'predict_test:answer_input' info_answer.sub %}" hx-boost="true">
+                               href="" hx-boost="true">
                                 답안을 제출해주세요.
                             </a>
                         </th>
