@@ -120,20 +120,18 @@
                     {% endif %}
                 {% else %}
                     {# 모집 단위 및 직렬 #}
-                    {% component "parent_select_cascading_selects" %}{% endcomponent %}
-
-{#                    <select id="id_unit" class="form-select mt-3" name="unit_id" aria-label="Select unit"#}
-{#                            hx-post="" hx-push-url="false"#}
-{#                            hx-trigger="change" hx-target="#student_create_department">#}
-{#                        <option value="">모집 단위를 선택해주세요.</option>#}
-{#                        {% for unit in units %}#}
-{#                            <option value="{{ unit.id }}">{{ unit.name }}</option>#}
-{#                        {% endfor %}#}
-{#                    </select>#}
-{#                    <div id="student_create_department" class="input-group"></div>#}
-{#                    {% if form.errors.unit_id or form.errors.department_id %}#}
-{#                        <div class="text-danger text-start fw-bold">모집 단위 및 직렬을 선택해주세요.</div>#}
-{#                    {% endif %}#}
+                    <select id="id_unit" class="form-select mt-3" name="unit_id" aria-label="Select unit"
+                            hx-post="" hx-push-url="false"
+                            hx-trigger="change" hx-target="#student_create_department">
+                        <option value="">모집 단위를 선택해주세요.</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}">{{ unit.unit }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="student_create_department" class="input-group"></div>
+                    {% if form.errors.unit_id or form.errors.department_id %}
+                        <div class="text-danger text-start fw-bold">모집 단위 및 직렬을 선택해주세요.</div>
+                    {% endif %}
 
                     {# 응시번호 #}
                     {% partial serial %}

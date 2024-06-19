@@ -12,6 +12,7 @@ CURRENT_EXAM = '행시'
 CURRENT_ROUND = 0
 
 qs_exam = predict_models.Exam.objects.filter(exam=CURRENT_EXAM)
+qs_unit = predict_models.Unit.objects.filter(exam=CURRENT_EXAM)
 qs_department = predict_models.Department.objects.filter(exam=CURRENT_EXAM)
 qs_student = predict_models.Student.objects.filter(
     year=CURRENT_YEAR, exam=CURRENT_EXAM, round=CURRENT_ROUND)
@@ -64,11 +65,6 @@ def index_view(request: common_utils.HtmxHttpRequest):
     return render(request, 'a_predict/normal/predict_index.html', context)
 
 
-def student_anonymous_view(request: common_utils.HtmxHttpRequest):
-    context = {}
-    return render(request, 'a_predict/normal/predict_index.html', context)
-
-
 @login_required
 def student_create_view(request: common_utils.HtmxHttpRequest):
     info = {
@@ -78,7 +74,6 @@ def student_create_view(request: common_utils.HtmxHttpRequest):
 
     form = predict_forms.StudentForm
 
-    units = qs_department.values_list('unit', flat=True).distinct()
     departments = qs_department.values_list('department', flat=True).distinct()
 
     context = common_utils.update_context_data(
@@ -93,7 +88,7 @@ def student_create_view(request: common_utils.HtmxHttpRequest):
         icon_nav=icon_set.ICON_NAV,
 
         # index_info_student: 수험 정보
-        units=units,
+        units=qs_unit,
         departments=departments,
     )
 

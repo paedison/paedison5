@@ -5,7 +5,6 @@ from .views import normal_views, normal_views_old, admin_views
 app_name = 'predict'
 
 normal_patterns = [
-    path('', normal_views.index_view, name='index'),
     # path('test/', normal_views.index_test_view, name='index_test'),
     #
     # path('answer/<str:sub>/', normal_views.answer_input_view, name='answer_input'),
@@ -19,14 +18,12 @@ normal_patterns = [
 ]
 
 student_patterns = [
-    path('anonymous/', normal_views.student_anonymous_view, name='student-anonymous'),
     path('create/', normal_views.student_create_view, name='student-create'),
     # path('student/department/',
     #      normal_views.student_create_department, name='student_create_department'),
 ]
 
 old_normal_patterns = [
-    path('', normal_views_old.index_view, name='index'),
     path('test/', normal_views_old.index_test_view, name='index_test'),
     path('student/', normal_views_old.student_create_view, name='student_create'),
     path('student/department/',
@@ -89,6 +86,8 @@ admin_patterns = [
 ]
 
 urlpatterns = [
+    path('', normal_views.index_view, name='index'),
+
     path('', include(normal_patterns)),
     path('student/', include(student_patterns)),
     path('old/', include(old_normal_patterns)),

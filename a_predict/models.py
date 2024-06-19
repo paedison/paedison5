@@ -27,17 +27,18 @@ def number_choice() -> list:
 def get_remarks(message_type: str, remarks: str | None) -> str:
     utc_now = datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M')
     separator = '|' if remarks else ''
-    if remarks:
-        remarks += f"{separator}{message_type}_at:{utc_now}"
-    else:
-        remarks = f"{message_type}_at:{utc_now}"
-    return remarks
+    if message_type:
+        if remarks:
+            remarks += f"{separator}{message_type}_at:{utc_now}"
+        else:
+            remarks = f"{message_type}_at:{utc_now}"
+        return remarks
 
 
 class ExamChoice(models.TextChoices):
-    HAENGSI = '행시', '5급공채(행정·기술)/외교원/지역인재 7급'
+    HAENGSI = '행시', '5급공채/외교원/지역인재 7급'
     IPSI = '입시', '입법고시'
-    CHILGEUP = '칠급', '7급공채 국가직(행정·기술)/민간경력 5·7급'
+    CHILGEUP = '칠급', '7급공채/민간경력 5·7급'
     PRIME = '프모', '프라임 모의고사'
 
 
@@ -73,7 +74,7 @@ class RemarksField(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk is not None:
-            message_type = kwargs.pop('message_type')
+            message_type = kwargs.pop('message_type', '')
             self.remarks = get_remarks(message_type, self.remarks)
         super().save(*args, **kwargs)
 
@@ -89,13 +90,17 @@ class TimeChoiceBase(TimeRecordField, ChoiceMethod):
 
 
 class Exam(TimeRemarkChoiceBase):
-    exam = models.CharField(max_length=2, choices=ExamChoice, unique=True)
+    exam = models.CharField(max_length=2, choices=ExamChoice)
+    round = models.IntegerField(default=0)  # 0 for '행시, 입시, 칠급', round number for '프모'
 
     page_opened_at = models.DateTimeField(default=timezone.now)
     exam_started_at = models.DateTimeField(default=timezone.now)
     exam_finished_at = models.DateTimeField(default=timezone.now)
     answer_predict_opened_at = models.DateTimeField(default=timezone.now)
     answer_official_opened_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ['exam', 'round']
 
     # @property
     # def answer_file(self):
@@ -111,7 +116,7 @@ class Unit(TimeRemarkChoiceBase):
         unique_together = ['exam', 'unit']
 
     def __str__(self):
-        return f'{self.unit}'
+        return f'{self.exam}-{self.unit}'
 
 
 class Department(TimeRemarkChoiceBase):
@@ -124,13 +129,13 @@ class Department(TimeRemarkChoiceBase):
         unique_together = ['exam', 'unit', 'department']
 
     def __str__(self):
-        return f'{self.unit}-{self.department}'
+        return f'{self.exam}-{self.unit}-{self.department}'
 
 
 class Student(TimeRemarkChoiceBase):
     year = models.IntegerField(choices=year_choice, default=datetime.now().year)
     exam = models.CharField(max_length=2, choices=ExamChoice)
-    round = models.IntegerField(default=0)  # 0 for PSAT, round number for Prime
+    round = models.IntegerField(default=0)  # 0 for '행시, 입시, 칠급', round number for '프모'
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='psat_predict_students')
     name = models.CharField(max_length=20)
@@ -162,12 +167,13 @@ class SubmittedAnswer(TimeRemarkChoiceBase):
 
 
 class StudentAnswer(TimeRemarkChoiceBase):
+    updated_at = models.DateTimeField(auto_now=True)
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='student_answers')
-    is_confirmed = models.BooleanField(default=False)
-    answer_heonbeob = models.TextField()
-    answer_eoneo = models.TextField()
-    answer_jaryo = models.TextField()
-    answer_sanghwang = models.TextField()
+
+    heonbeob = models.TextField(default='')
+    eoneo = models.TextField(default='')
+    jaryo = models.TextField(default='')
+    sanghwang = models.TextField(default='')
 
     class Meta:
         verbose_name = "성적 예측 제출 답안"
@@ -176,6 +182,12 @@ class StudentAnswer(TimeRemarkChoiceBase):
 
     def __str__(self):
         return f'[Answer#{self.id}]{self.student}'
+
+    @property
+    def all_submitted(self):
+        if self.student.exam == '칠급':
+            return all([self.eoneo, self.jaryo, self.sanghwang])
+        return all([self.heonbeob, self.eoneo, self.jaryo, self.sanghwang])
 
 
 # class StudentAnswer(TimeRemarkChoiceBase):
@@ -234,7 +246,7 @@ class StudentAnswer(TimeRemarkChoiceBase):
 class AnswerCountBase(TimeChoiceBase):
     year = models.IntegerField(choices=year_choice, default=datetime.now().year)
     exam = models.CharField(max_length=2, choices=ExamChoice)
-    round = models.IntegerField(default=0)  # 0 for PSAT, round number for Prime
+    round = models.IntegerField(default=0)  # 0 for '행시, 입시, 칠급', round number for '프모'
 
     subject = models.CharField(max_length=2, choices=SubjectChoice)
     number = models.IntegerField()
@@ -390,12 +402,13 @@ class StatisticsVirtual(StatisticsBase):
 class Location(TimeRemarkChoiceBase):
     year = models.IntegerField(choices=year_choice, default=datetime.now().year)
     exam = models.CharField(max_length=2, choices=ExamChoice)
-    unit = models.CharField(max_length=128)
-    department = models.CharField(max_length=128)
-
     serial_start = models.IntegerField()
     serial_end = models.IntegerField()
     region = models.CharField(max_length=10)
+    department = models.CharField(max_length=128)
     school = models.CharField(max_length=30)
     address = models.CharField(max_length=50)
     contact = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f'{self.region}-{self.department}:{self.school}'

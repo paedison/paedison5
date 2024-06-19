@@ -18,8 +18,4 @@ def update_context_data(context: dict = None, **kwargs):
 def detect_encoding(file_path):
     with open(file_path, 'rb') as f:
         first_bytes = f.read(3)
-
-    if first_bytes == b'\xef\xbb\xbf':
-        return 'utf-8-sig'
-    else:
-        return 'utf-8'
+    return 'utf-8-sig' if first_bytes == b'\xef\xbb\xbf' else 'utf-8'

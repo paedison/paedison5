@@ -7,10 +7,24 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from a_common.utils import detect_encoding
+from a_predict.models import Student
 
 
-def create_instance_get_messages(file_name: str, model: any) -> dict:
-    model_name = model._meta.model_name
+exam_id_list = [
+    {'id': 1, 'ex': '프모', 'round': 1},
+    {'id': 2, 'ex': '프모', 'round': 3},
+    {'id': 3, 'ex': '프모', 'round': 4},
+    {'id': 4, 'ex': '프모', 'round': 5},
+    {'id': 5, 'ex': '프모', 'round': 6},
+    {'id': 6, 'ex': '행시', 'round': 0},
+]
+
+department_id_list = []
+
+
+def create_instance_get_messages() -> dict:
+    model_name = 'Student'
+    file_name = 'predict_student.csv'
     list_update = []
     list_create = []
     count_update = count_create = 0
@@ -20,19 +34,20 @@ def create_instance_get_messages(file_name: str, model: any) -> dict:
     with open(file_name, 'r', encoding=encoding) as file:
         csv_data = csv.DictReader(file)
         fields = list(csv_data.fieldnames)
+        verifying_fields = ['id', 'user_id', 'name', 'serial', 'password']
         for row in csv_data:
             row: dict
             if row['id']:
                 try:
-                    instance = model.objects.get(id=row['id'])
+                    instance = Student.objects.get(id=row['id'])
                     fields_not_match = any(str(getattr(instance, field)) != row[field] for field in fields)
                     if fields_not_match:
                         for field, value in row.items():
                             setattr(instance, field, value)
                         list_update.append(instance)
                         count_update += 1
-                except model.DoesNotExist:
-                    list_create.append(model(**row))
+                except Student.DoesNotExist:
+                    list_create.append(Student(**row))
                     count_create += 1
 
         try:

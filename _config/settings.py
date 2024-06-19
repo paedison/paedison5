@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'easyaudit',
     'django_components',
+    'django_extensions',
 
     # My Apps
     'a_common',

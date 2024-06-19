@@ -11,8 +11,8 @@ class ParentSelectCascadingSelectsComponent(component.Component):
         <div>
             <label class="label">Unit</label>
             <select class="input" name="unit" hx-get="{% url 'select_cascading_selects' %}" hx-target="#models">
-            {% for unit in units %}
-                <option value="{{ unit.id }}">{{ unit.name }}</option>
+            {% for obj in objects %}
+                <option value="{{ obj.id }}">{{ obj.unit }}</option>
             {% endfor %}
             </select>
         </div>
@@ -24,6 +24,5 @@ class ParentSelectCascadingSelectsComponent(component.Component):
         </div>
     """
 
-    def get_context_data(self, *args, **kwargs) -> Dict[str, Any]:
-        units = Unit.objects.order_by("order")
-        return {"units": units}
+    def get_context_data(self, objects, *args, **kwargs) -> Dict[str, Any]:
+        return {"objects": objects}
