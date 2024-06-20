@@ -189,26 +189,26 @@ class StudentAnswer(TimeRemarkChoiceBase):
             return all([self.eoneo, self.jaryo, self.sanghwang])
         return all([self.heonbeob, self.eoneo, self.jaryo, self.sanghwang])
 
+    def get_answer_list(self, subject: str):
+        ans_str: str = getattr(self, subject)
+        ans_list = ans_str.split(',') if ans_str else []
+        answer_list = []
+        for idx, val in enumerate(ans_list):
+            ans_number = int(val)
+            ans_number_list = [int(v) for v in val if ans_number > 5]
+            append_dict = {'number': idx + 1, 'ans_number': ans_number}
+            if ans_number_list:
+                append_dict['ans_number_list'] = ans_number_list
+            answer_list.append(append_dict)
+        return answer_list
+
     @property
     def answer_dict(self):
-        def get_answer_list(subject: str):
-            ans_str: str = getattr(self, subject)
-            ans_list = ans_str.split(',') if ans_str else []
-            answer_list = []
-            for idx, val in enumerate(ans_list):
-                ans_number = int(val)
-                ans_number_list = [int(v) for v in val if ans_number > 5]
-                append_dict = {'number': idx + 1, 'ans_number': ans_number}
-                if ans_number_list:
-                    append_dict['ans_number_list'] = ans_number_list
-                answer_list.append(append_dict)
-            return answer_list
-
         return {
-            '헌법': get_answer_list('heonbeob'),
-            '언어': get_answer_list('eoneo'),
-            '자료': get_answer_list('jaryo'),
-            '상황': get_answer_list('sanghwang'),
+            '헌법': self.get_answer_list('heonbeob'),
+            '언어': self.get_answer_list('eoneo'),
+            '자료': self.get_answer_list('jaryo'),
+            '상황': self.get_answer_list('sanghwang'),
         }
 
 

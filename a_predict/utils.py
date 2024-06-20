@@ -1,7 +1,76 @@
 import numpy as np
+import pandas as pd
 from django.db.models import F, Count, Max, Avg
 from django.db.models import Window
 from django.db.models.functions import Rank, PercentRank
+
+from a_predict import models as predict_models
+
+
+def get_answer_correct(file) -> dict:
+    # {
+    #     '헌법': [
+    #         {
+    #             'number': 10,
+    #             'ans_number': 1,
+    #             'ans_number_list': [],
+    #             'rate_correct': 0,
+    #         },
+    #         ...
+    #     ]
+    # }
+    with open(file, 'r', encoding='utf-8') as f:
+        df = pd.read_csv(f, header=0, index_col=0)
+
+        subjects = ['헌법', '언어', '자료', '상황']
+        if '헌법' not in df.columns:
+            subjects.remove('헌법')
+
+        answer_correct = {}
+        for subject in subjects:
+            df_subject = df[[subject]].dropna()
+
+            answer_correct[subject] = []
+            for index, row in df_subject.iterrows():
+                ans_number = int(row[subject])
+                ans_number_list = [int(ans) for ans in str(ans_number) if ans_number > 5]
+                append_dict = {'number': int(index), 'ans_number': ans_number}
+                if ans_number_list:
+                    append_dict['ans_number_list'] = ans_number_list
+                answer_correct[subject].append(append_dict)
+        return answer_correct
+
+
+def get_answer_student(
+        student: predict_models.Student.objects,
+        subject_vars,
+        problem_count: dict,
+):
+    qs_final = predict_models.StudentAnswer.objects.filter(student=student).first()
+    qs_temp = predict_models.SubmittedAnswer.objects.filter(student=student)
+
+    def get_answer_student_by_subject(subject: str):
+        field = subject_vars[subject][1]
+        answers_final = qs_final.get_answer_list(field)
+        if answers_final:
+            return answers_final
+        else:
+            answers_temp = []
+            for i in range(1, problem_count[subject] + 1):
+                answers_temp.append({'number': i, 'ans_number': ''})
+
+            submitted_answer = qs_temp.filter(subject=subject).values(
+                'number', ans_number=F('answer'))
+            for ans in submitted_answer:
+                index = ans['number'] - 1
+                answers_temp[index]['ans_number'] = ans['ans_number']
+            return answers_temp
+
+    answer_student = {}
+    for sub in problem_count.keys():
+        answer_student[sub] = get_answer_student_by_subject(sub)
+
+    return answer_student
 
 
 def get_dict_by_sub(target_list: list[dict]) -> dict:

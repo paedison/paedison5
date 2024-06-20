@@ -1,8 +1,8 @@
 import os
 
-import pandas as pd
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.db.models import F
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 
@@ -10,15 +10,27 @@ from a_common import utils as common_utils
 from a_common.constants import icon_set
 from a_predict import forms as predict_forms
 from a_predict import models as predict_models
+from a_predict import utils as predict_utils
 
 CURRENT_YEAR = 2024
 CURRENT_EXAM = '행시'
 CURRENT_ROUND = 0
 
+DEFAULT_PROBLEM_COUNT = 25 if CURRENT_EXAM == '칠급' else 40
+PROBLEM_COUNT = {
+    '언어': DEFAULT_PROBLEM_COUNT,
+    '자료': DEFAULT_PROBLEM_COUNT,
+    '상황': DEFAULT_PROBLEM_COUNT,
+}
+if CURRENT_EXAM != '칠급':
+    PROBLEM_COUNT['헌법'] = 25
+
 # answer_file
 DATA_DIR = os.path.join(settings.BASE_DIR, 'a_predict', 'data')
-ANSWER_FILE = os.path.join(DATA_DIR, 'answers.csv')
-ANSWER_EMPTY_FILE = os.path.join(DATA_DIR, 'answers_empty.csv')
+ANSWER_FILE_PATH = os.path.join(DATA_DIR, 'answers.csv')
+ANSWER_EMPTY_FILE_PATH = os.path.join(DATA_DIR, 'answers_empty.csv')
+ANSWER_FILE = ANSWER_FILE_PATH if os.path.exists(ANSWER_FILE_PATH) else ANSWER_EMPTY_FILE_PATH
+ANSWER_FILE_ENCODING = common_utils.detect_encoding(ANSWER_FILE)
 
 qs_exam = predict_models.Exam.objects.filter(exam=CURRENT_EXAM)
 qs_unit = predict_models.Unit.objects.filter(exam=CURRENT_EXAM)
@@ -48,50 +60,14 @@ sub_field = {
     'psat': 'score_psat',
     'psat_avg': 'score_psat_avg',
 }
-
-
-def get_answer_correct(file):
-    df = pd.read_csv(file, header=0, index_col=0)
-
-    subjects = ['헌법', '언어', '자료', '상황']
-    if '헌법' not in df.columns:
-        subjects.remove('헌법')
-
-    answer_correct = {}
-    for subject in subjects:
-        filtered_df = df[[subject]].dropna()
-
-        answer_correct[subject] = []
-        for index, row in filtered_df.iterrows():
-            ans_number = int(row[subject])
-            ans_number_list = [
-                int(ans) for ans in str(ans_number) if ans_number > 5
-            ]
-            append_dict = {'number': int(index), 'ans_number': ans_number}
-            if ans_number_list:
-                append_dict['ans_number_list'] = ans_number_list
-            answer_correct[subject].append(append_dict)
-    return answer_correct
-
-
-def get_answer_correct_dict() -> dict:
-    # {
-    #     '헌법': [
-    #         {
-    #             'number': 10,
-    #             'ans_number': 1,
-    #             'ans_number_list': [],
-    #             'rate_correct': 0,
-    #         },
-    #         ...
-    #     ]
-    # }
-    try:
-        with open(ANSWER_FILE, 'r', encoding='utf-8') as file:
-            return get_answer_correct(file)
-    except FileNotFoundError:
-        with open(ANSWER_EMPTY_FILE, 'r', encoding='utf-8') as file:
-            return get_answer_correct(file)
+SUBJECT_VARS = {
+    '헌법': ('헌법', 'heonbeob'),
+    '언어': ('언어논리', 'eoneo'),
+    '자료': ('자료해석', 'jaryo'),
+    '상황': ('상황판단', 'sanghwang'),
+    '총점': ('PSAT 총점', 'psat'),
+    '평균': ('PSAT 평균', 'psat_avg'),
+}
 
 
 def index_view(request: common_utils.HtmxHttpRequest):
@@ -114,16 +90,12 @@ def index_view(request: common_utils.HtmxHttpRequest):
         predict_models.Location,
         exam=CURRENT_EXAM, serial_start__lte=serial, serial_end__gte=serial)
 
-    answer_correct_dict = get_answer_correct_dict()
+    data_answer_correct = predict_utils.get_answer_correct(ANSWER_FILE)
 
-    student_answer = predict_models.StudentAnswer.objects.filter(student=student)
-    data_answer_student = {}
-    if student_answer:
-        data_answer_student = student_answer.first().answer_dict
+    data_answer_student = predict_utils.get_answer_student(student, SUBJECT_VARS, PROBLEM_COUNT)
 
     info_answer_student = {}
     if data_answer_student:
-        problem_count = 25 if CURRENT_EXAM == '칠급' else 40
         for sub, answer in data_answer_student.items():
             info_answer_student[sub] = {
                 'icon': icon_set.ICON_SUBJECT[sub],
@@ -131,7 +103,7 @@ def index_view(request: common_utils.HtmxHttpRequest):
                 'sub_eng': sub_eng_dict[sub],
                 'subject': subject_dict[sub],
                 # 'participants': self.participant_count[sub],
-                'problem_count': 25 if sub == '헌법' else problem_count,
+                'problem_count': PROBLEM_COUNT[sub],
                 'answer_count': len(data_answer_student),
                 # 'score_virtual': score_virtual[sub],
                 # 'score_real': None,
@@ -159,7 +131,7 @@ def index_view(request: common_utils.HtmxHttpRequest):
         info_answer_student=info_answer_student,
 
         # index_sheet_answer: 답안 확인
-        data_answer_correct=answer_correct_dict,
+        data_answer_correct=data_answer_correct,
         # data_answer_predict=data_answer['answer_predict'],
         data_answer_student=data_answer_student,
 
@@ -176,6 +148,15 @@ def index_view(request: common_utils.HtmxHttpRequest):
 
 @login_required
 def student_create_view(request: common_utils.HtmxHttpRequest):
+    context = {}
+
+    if not request.user.is_authenticated:
+        return render(request, 'a_predict/normal/predict_index.html', context)
+
+    student = qs_student.filter(user=request.user).first()
+    if student:
+        return redirect('predict:index')
+
     info = {
         'menu': 'predict',
         'view_type': 'predict',
@@ -186,6 +167,8 @@ def student_create_view(request: common_utils.HtmxHttpRequest):
     departments = qs_department.values_list('department', flat=True).distinct()
 
     context = common_utils.update_context_data(
+        context,
+
         # base info
         info=info,
         exam=CURRENT_EXAM,
