@@ -40,11 +40,13 @@
                 </tr>
             </thead>
             <tbody>
-                {% with info_answer=info_answer_student.헌법 %}{% partial sub_answer_line %}{% endwith %}
+                {% if info_answer_student.헌법 %}
+                    {% with info_answer=info_answer_student.헌법 %}{% partial sub_answer_line %}{% endwith %}
+                {% endif %}
                 {% with info_answer=info_answer_student.언어 %}{% partial sub_answer_line %}{% endwith %}
                 {% with info_answer=info_answer_student.자료 %}{% partial sub_answer_line %}{% endwith %}
                 {% with info_answer=info_answer_student.상황 %}{% partial sub_answer_line %}{% endwith %}
-                {% with info_answer=info_answer_student.피셋 %}{% partial sub_answer_line %}{% endwith %}
+                {% with info_answer=info_answer_student.평균 %}{% partial sub_answer_line %}{% endwith %}
             </tbody>
         </table>
         <div>

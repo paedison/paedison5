@@ -114,6 +114,7 @@ class Unit(TimeRemarkChoiceBase):
 
     class Meta:
         unique_together = ['exam', 'unit']
+        ordering = ['order']
 
     def __str__(self):
         return f'{self.exam}-{self.unit}'
@@ -127,6 +128,7 @@ class Department(TimeRemarkChoiceBase):
 
     class Meta:
         unique_together = ['exam', 'unit', 'department']
+        ordering = ['order']
 
     def __str__(self):
         return f'{self.exam}-{self.unit}-{self.department}'
@@ -175,6 +177,11 @@ class StudentAnswer(TimeRemarkChoiceBase):
     jaryo = models.TextField(default='')
     sanghwang = models.TextField(default='')
 
+    heonbeob_confirmed = models.BooleanField(default=False)
+    eoneo_confirmed = models.BooleanField(default=False)
+    jaryo_confirmed = models.BooleanField(default=False)
+    sanghwang_confirmed = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = "성적 예측 제출 답안"
         verbose_name_plural = "성적 예측 제출 답안"
@@ -184,16 +191,17 @@ class StudentAnswer(TimeRemarkChoiceBase):
         return f'[Answer#{self.id}]{self.student}'
 
     @property
-    def all_submitted(self):
-        if self.student.exam == '칠급':
-            return all([self.eoneo, self.jaryo, self.sanghwang])
-        return all([self.heonbeob, self.eoneo, self.jaryo, self.sanghwang])
+    def all_confirmed(self):
+        confirmed_list = [self.eoneo_confirmed, self.jaryo_confirmed, self.sanghwang_confirmed]
+        if self.student.exam != '칠급':
+            confirmed_list.append(self.heonbeob_confirmed)
+        return all(confirmed_list)
 
-    def get_answer_list(self, subject: str):
+    def get_answer_list(self, subject: str) -> list:
         ans_str: str = getattr(self, subject)
-        ans_list = ans_str.split(',') if ans_str else []
+        ans_str_list = ans_str.split(',') if ans_str else []
         answer_list = []
-        for idx, val in enumerate(ans_list):
+        for idx, val in enumerate(ans_str_list):
             ans_number = int(val)
             ans_number_list = [int(v) for v in val if ans_number > 5]
             append_dict = {'number': idx + 1, 'ans_number': ans_number}

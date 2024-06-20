@@ -4,7 +4,12 @@ from django.db.models import F, Count, Max, Avg
 from django.db.models import Window
 from django.db.models.functions import Rank, PercentRank
 
-from a_predict import models as predict_models
+from a_predict.models import (
+    Exam, Unit, Department, Student, Location,
+    SubmittedAnswer, StudentAnswer,
+    AnswerCount, AnswerCountLowRank, AnswerCountMidRank, AnswerCountTopRank,
+    Statistics, StatisticsVirtual,
+)
 
 
 def get_answer_correct(file) -> dict:
@@ -42,35 +47,35 @@ def get_answer_correct(file) -> dict:
 
 
 def get_answer_student(
-        student: predict_models.Student.objects,
-        subject_vars,
+        qs_answer_final: StudentAnswer.objects,
+        qs_answer_temp: SubmittedAnswer.objects,
+        subject_vars: dict[str, tuple[str, str]],
         problem_count: dict,
-):
-    qs_final = predict_models.StudentAnswer.objects.filter(student=student).first()
-    qs_temp = predict_models.SubmittedAnswer.objects.filter(student=student)
-
-    def get_answer_student_by_subject(subject: str):
+) -> tuple[dict, dict]:
+    def get_answer_student_by_subject(subject: str) -> tuple[list, int]:
         field = subject_vars[subject][1]
-        answers_final = qs_final.get_answer_list(field)
-        if answers_final:
-            return answers_final
+
+        answer_final = qs_answer_final.get_answer_list(field)
+        if answer_final:
+            return answer_final, len(answer_final)
         else:
             answers_temp = []
             for i in range(1, problem_count[subject] + 1):
                 answers_temp.append({'number': i, 'ans_number': ''})
 
-            submitted_answer = qs_temp.filter(subject=subject).values(
+            submitted_answer = qs_answer_temp.filter(subject=subject).values(
                 'number', ans_number=F('answer'))
             for ans in submitted_answer:
                 index = ans['number'] - 1
                 answers_temp[index]['ans_number'] = ans['ans_number']
-            return answers_temp
+            return answers_temp, len(submitted_answer)
 
     answer_student = {}
+    answer_count = {}
     for sub in problem_count.keys():
-        answer_student[sub] = get_answer_student_by_subject(sub)
+        answer_student[sub], answer_count[sub] = get_answer_student_by_subject(sub)
 
-    return answer_student
+    return answer_student, answer_count
 
 
 def get_dict_by_sub(target_list: list[dict]) -> dict:

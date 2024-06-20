@@ -19,8 +19,7 @@ normal_patterns = [
 
 student_patterns = [
     path('create/', normal_views.student_create_view, name='student-create'),
-    # path('student/department/',
-    #      normal_views.student_create_department, name='student_create_department'),
+    path('department/', normal_views.department_list, name='department-list'),
 ]
 
 old_normal_patterns = [

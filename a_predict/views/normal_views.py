@@ -2,64 +2,24 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import F
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from a_common import utils as common_utils
 from a_common.constants import icon_set
+from a_common.utils import HtmxHttpRequest, detect_encoding, update_context_data
 from a_predict import forms as predict_forms
-from a_predict import models as predict_models
-from a_predict import utils as predict_utils
+from a_predict.models import (
+    Exam, Unit, Department, Student, Location,
+    SubmittedAnswer, StudentAnswer,
+    AnswerCount, AnswerCountLowRank, AnswerCountMidRank, AnswerCountTopRank,
+    Statistics, StatisticsVirtual,
+)
+from a_predict.utils import get_answer_correct, get_answer_student
 
 CURRENT_YEAR = 2024
 CURRENT_EXAM = '행시'
 CURRENT_ROUND = 0
 
-DEFAULT_PROBLEM_COUNT = 25 if CURRENT_EXAM == '칠급' else 40
-PROBLEM_COUNT = {
-    '언어': DEFAULT_PROBLEM_COUNT,
-    '자료': DEFAULT_PROBLEM_COUNT,
-    '상황': DEFAULT_PROBLEM_COUNT,
-}
-if CURRENT_EXAM != '칠급':
-    PROBLEM_COUNT['헌법'] = 25
-
-# answer_file
-DATA_DIR = os.path.join(settings.BASE_DIR, 'a_predict', 'data')
-ANSWER_FILE_PATH = os.path.join(DATA_DIR, 'answers.csv')
-ANSWER_EMPTY_FILE_PATH = os.path.join(DATA_DIR, 'answers_empty.csv')
-ANSWER_FILE = ANSWER_FILE_PATH if os.path.exists(ANSWER_FILE_PATH) else ANSWER_EMPTY_FILE_PATH
-ANSWER_FILE_ENCODING = common_utils.detect_encoding(ANSWER_FILE)
-
-qs_exam = predict_models.Exam.objects.filter(exam=CURRENT_EXAM)
-qs_unit = predict_models.Unit.objects.filter(exam=CURRENT_EXAM)
-qs_department = predict_models.Department.objects.filter(exam=CURRENT_EXAM)
-qs_student = predict_models.Student.objects.filter(
-    year=CURRENT_YEAR, exam=CURRENT_EXAM, round=CURRENT_ROUND)
-
-sub_eng_dict = {
-    '헌법': 'heonbeob',
-    '언어': 'eoneo',
-    '자료': 'jaryo',
-    '상황': 'sanghwang',
-    '피셋': 'psat',
-}
-subject_dict = {
-    '헌법': '헌법',
-    '언어': '언어논리',
-    '자료': '자료해석',
-    '상황': '상황판단',
-    '피셋': 'PSAT 평균',
-}
-sub_field = {
-    '헌법': 'score_heonbeob',
-    '언어': 'score_eoneo',
-    '자료': 'score_jaryo',
-    '상황': 'score_sanghwang',
-    'psat': 'score_psat',
-    'psat_avg': 'score_psat_avg',
-}
 SUBJECT_VARS = {
     '헌법': ('헌법', 'heonbeob'),
     '언어': ('언어논리', 'eoneo'),
@@ -69,8 +29,29 @@ SUBJECT_VARS = {
     '평균': ('PSAT 평균', 'psat_avg'),
 }
 
+if CURRENT_EXAM == '칠급':
+    PROBLEM_COUNT = {'언어': 25, '자료': 25, '상황': 25}
+    SUBJECT_VARS.pop('헌법')
+else:
+    PROBLEM_COUNT = {'헌법': 25, '언어': 40, '자료': 40, '상황': 40}
 
-def index_view(request: common_utils.HtmxHttpRequest):
+# answer_file
+ANSWER_FILE = settings.BASE_DIR / 'a_predict/data/answers.csv'
+EMPTY_FILE = settings.BASE_DIR / 'a_predict/data/answers_empty.csv'
+ANSWER_FILE = ANSWER_FILE if os.path.exists(ANSWER_FILE) else EMPTY_FILE
+ANSWER_FILE_ENCODING = detect_encoding(ANSWER_FILE)
+
+qs_exam = Exam.objects.filter(exam=CURRENT_EXAM)
+qs_unit = Unit.objects.filter(exam=CURRENT_EXAM)
+qs_department = Department.objects.filter(exam=CURRENT_EXAM)
+qs_student = Student.objects.filter(
+    year=CURRENT_YEAR, exam=CURRENT_EXAM, round=CURRENT_ROUND)
+qs_location = Location.objects.filter(year=CURRENT_YEAR, exam=CURRENT_EXAM)
+qs_student_answer = StudentAnswer.objects
+qs_submitted_answer = SubmittedAnswer.objects
+
+
+def index_view(request: HtmxHttpRequest):
     context = {}
 
     if not request.user.is_authenticated:
@@ -86,31 +67,54 @@ def index_view(request: common_utils.HtmxHttpRequest):
     }
 
     serial = int(student.serial)
-    location = get_object_or_404(
-        predict_models.Location,
-        exam=CURRENT_EXAM, serial_start__lte=serial, serial_end__gte=serial)
+    location = qs_location.filter(serial_start__lte=serial, serial_end__gte=serial).first()
 
-    data_answer_correct = predict_utils.get_answer_correct(ANSWER_FILE)
+    data_answer_correct = get_answer_correct(ANSWER_FILE)
 
-    data_answer_student = predict_utils.get_answer_student(student, SUBJECT_VARS, PROBLEM_COUNT)
+    qs_answer_final = qs_student_answer.filter(student=student).first()
+    qs_answer_temp = qs_submitted_answer.filter(student=student)
+    data_answer_student, data_answer_count = get_answer_student(
+        qs_answer_final, qs_answer_temp, SUBJECT_VARS, PROBLEM_COUNT)
+
+    psat_problem_count = sum([val for val in PROBLEM_COUNT.values()])
+    psat_answer_count = sum([val for val in data_answer_count.values()])
 
     info_answer_student = {}
     if data_answer_student:
         for sub, answer in data_answer_student.items():
+            subject, sub_eng = SUBJECT_VARS[sub]
+            problem_count = PROBLEM_COUNT[sub]
+
+            answer_count = data_answer_count[sub]
+            is_confirmed = getattr(qs_answer_final, f'{sub_eng}_confirmed')
+
             info_answer_student[sub] = {
                 'icon': icon_set.ICON_SUBJECT[sub],
                 'sub': sub,
-                'sub_eng': sub_eng_dict[sub],
-                'subject': subject_dict[sub],
+                'sub_eng': sub_eng,
+                'subject': subject,
                 # 'participants': self.participant_count[sub],
-                'problem_count': PROBLEM_COUNT[sub],
-                'answer_count': len(data_answer_student),
+                'problem_count': problem_count,
+                'answer_count': answer_count,
                 # 'score_virtual': score_virtual[sub],
                 # 'score_real': None,
-                'is_confirmed': len(data_answer_student) > 0,
+                'is_confirmed': is_confirmed,
             }
 
-    context = common_utils.update_context_data(
+        info_answer_student['평균'] = {
+            'icon': '',
+            'sub': '평균',
+            'sub_eng': 'psat_avg',
+            'subject': 'PSAT 평균',
+            # 'participants': self.participant_count[sub],
+            'problem_count': psat_problem_count,
+            'answer_count': psat_answer_count,
+            # 'score_virtual': score_virtual[sub],
+            # 'score_real': None,
+            'is_confirmed': qs_answer_final.all_confirmed,
+        }
+
+    context = update_context_data(
         context,
 
         # base info
@@ -147,12 +151,7 @@ def index_view(request: common_utils.HtmxHttpRequest):
 
 
 @login_required
-def student_create_view(request: common_utils.HtmxHttpRequest):
-    context = {}
-
-    if not request.user.is_authenticated:
-        return render(request, 'a_predict/normal/predict_index.html', context)
-
+def student_create_view(request: HtmxHttpRequest):
     student = qs_student.filter(user=request.user).first()
     if student:
         return redirect('predict:index')
@@ -161,14 +160,24 @@ def student_create_view(request: common_utils.HtmxHttpRequest):
         'menu': 'predict',
         'view_type': 'predict',
     }
+    if request.method == "POST":
+        form = predict_forms.StudentForm(request.POST)
+        if form.is_valid():
+            student = form.save(commit=False)
+            student.year = CURRENT_YEAR
+            student.exam = CURRENT_EXAM
+            student.round = CURRENT_ROUND
+            student.user = request.user
+            student.save()
+            qs_student_answer.get_or_create(student=student)
+        else:
+            pass
+        return redirect('predict:index')
 
-    form = predict_forms.StudentForm
+    else:
+        form = predict_forms.StudentForm()
 
-    departments = qs_department.values_list('department', flat=True).distinct()
-
-    context = common_utils.update_context_data(
-        context,
-
+    context = update_context_data(
         # base info
         info=info,
         exam=CURRENT_EXAM,
@@ -180,8 +189,17 @@ def student_create_view(request: common_utils.HtmxHttpRequest):
         icon_nav=icon_set.ICON_NAV,
 
         # index_info_student: 수험 정보
-        units=qs_unit,
-        departments=departments,
+        units=qs_unit.values_list('unit', flat=True),
+        form=form,
     )
 
     return render(request, 'a_predict/student_create.html', context)
+
+
+@login_required
+def department_list(request):
+    if request.method == 'POST':
+        unit = request.POST.get('unit')
+        departments = qs_department.filter(unit=unit).values_list('department', flat=True)
+        context = update_context_data(departments=departments)
+        return render(request, 'a_predict/snippets/department_list.html', context)
