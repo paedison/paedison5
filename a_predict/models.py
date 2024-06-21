@@ -161,7 +161,7 @@ class SubmittedAnswer(TimeRemarkChoiceBase):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='submitted_answers')
     subject = models.CharField(max_length=2, choices=SubjectChoice)
     number = models.IntegerField(choices=number_choice, default=1)
-    answer = models.IntegerField()
+    answer = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ['student', 'subject', 'number']

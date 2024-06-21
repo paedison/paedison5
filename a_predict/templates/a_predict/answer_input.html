@@ -1,0 +1,106 @@
+{% extends 'a_predict/_base.html' %}
+{% load static %}
+
+{% block main %}
+    {{ info|json_script:'info' }}
+    <section class="section htmx-fade-in htmx-fade-out" hx-target="#main" hx-swap="innerHTML swap:0.25s">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title d-flex align-items-center">
+                            {{ subject }} 답안 입력
+                            <a class="btn btn-sm btn-outline-primary ms-auto" hx-boost="true"
+                               href="{% url 'predict:index' %}">
+                                성적 예측 페이지로 이동
+                            </a>
+                        </h5>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                                답안 선택 후 제출 버튼을 클릭해주세요.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+
+                        <div class="row d-flex mb-3">
+                            <div class="col-6">
+                                {% for problem in answer_student %}
+                                    {% if exam == '칠급' or sub == '헌법' %}
+                                        {% if forloop.counter <= 15 %}
+                                            {% partial form %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% if forloop.counter <= 20 %}
+                                            {% partial form %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="col-6">
+                                {% for problem in answer_student %}
+                                    {% if ex == '칠급' or sub == '헌법' %}
+                                        {% if forloop.counter > 15 %}
+                                            {% partial form %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% if forloop.counter > 20 %}
+                                            {% partial form %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-start justify-content-center mb-3">
+                            <div class="badge bg-danger me-2"><i class="fa-regular fa-circle-check"></i> 참고</div>
+                            <div class="text-danger small fw-bold m-0">
+                                최종 제출한 답안은 변경 및 삭제가 불가하니 주의하시기 바랍니다.
+                            </div>
+                        </div>
+                        <form class="text-center mb-3">
+                            <input type="text" name="answer_id" value="{{ answer_student.id }}" aria-label="Answer ID" hidden/>
+                            <button class="btn btn-primary" hx-target="#modalContainer" type="submit" hx-push-url="false"
+                                    hx-post="{% url 'predict:answer-confirm' sub %}" hx-swap="innerHTML"
+                                    data-bs-toggle="modal" data-bs-target="#modalContainer">
+                                답안 제출
+                            </button>
+                        </form>
+                        <div class="text-center">
+                            <a class="btn btn-outline-primary" hx-boost="true"
+                               href="{% url 'predict:index' %}">
+                                성적 예측 페이지로 이동
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock main %}
+
+{% partialdef form %}
+    <form>
+        <input type="text" name="number" value="{{ problem.number }}" aria-label="Number" hidden/>
+        <div class="d-flex justify-content-center py-2">
+            <div class="d-inline-block fw-bold text-secondary pe-2">{{ problem.number|stringformat:'02d' }}.</div>
+            <div id="p{{ problem.number|stringformat:'02d' }}_answer"
+                 hx-target="this" hx-swap="innerHTML" hx-push-url="false">
+                {% for i in '1234' %}
+                    {% partialdef answer_buttons inline=True %}
+                        <input id="p{{ problem.number|stringformat:'02d' }}_answer{{ i }}"
+                               type="radio" class="btn-check" name="answer" value="{{ i }}"
+                               hx-trigger="change"
+                               hx-post="{% url 'predict:answer-submit' sub %}"/>
+                        <label class="btn btn-circle btn-sm fs-6
+                               {% if i|to_int == problem.answer_student %}btn-primary
+                               {% else %} btn-outline-secondary{% endif %}"
+                               for="p{{ problem.number|stringformat:'02d' }}_answer{{ i }}">
+                            {{ i }}</label>
+                    {% endpartialdef answer_buttons %}
+                {% endfor %}
+                {% if sub != '헌법' %}
+                    {% with i='5' %}{% partial answer_buttons %}{% endwith %}
+                {% endif %}
+            </div>
+        </div>
+    </form>
+{% endpartialdef form %}

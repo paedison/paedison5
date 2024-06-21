@@ -1,0 +1,16 @@
+{% for i in '1234' %}{% partial answer_buttons %}{% endfor %}
+{% if sub != '헌법' %}
+    {% with i='5' %}{% partial answer_buttons %}{% endwith %}
+{% endif %}
+
+{% partialdef answer_buttons %}
+    <input id="p{{ submitted_answer.number|stringformat:'02d' }}_answer{{ i }}"
+           type="radio" class="btn-check" name="answer" value="{{ i }}"
+           hx-trigger="change"
+           hx-post="{% url 'predict:answer-submit' sub %}"/>
+    <label class="btn btn-circle btn-sm fs-6
+           {% if i|to_int == submitted_answer.answer %}btn-primary
+           {% else %}btn-outline-secondary{% endif %}"
+           for="p{{ submitted_answer.number|stringformat:'02d' }}_answer{{ i }}">
+        {{ i }}</label>
+{% endpartialdef answer_buttons %}

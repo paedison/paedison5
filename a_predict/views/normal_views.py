@@ -1,63 +1,21 @@
-import os
-
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from a_common.constants import icon_set
-from a_common.utils import HtmxHttpRequest, detect_encoding, update_context_data
+from a_common.utils import HtmxHttpRequest, update_context_data
 from a_predict import forms as predict_forms
-from a_predict.models import (
-    Exam, Unit, Department, Student, Location,
-    SubmittedAnswer, StudentAnswer,
-    AnswerCount, AnswerCountLowRank, AnswerCountMidRank, AnswerCountTopRank,
-    Statistics, StatisticsVirtual,
-)
-from a_predict.utils import get_answer_correct, get_answer_student
-
-CURRENT_YEAR = 2024
-CURRENT_EXAM = '행시'
-CURRENT_ROUND = 0
-
-SUBJECT_VARS = {
-    '헌법': ('헌법', 'heonbeob'),
-    '언어': ('언어논리', 'eoneo'),
-    '자료': ('자료해석', 'jaryo'),
-    '상황': ('상황판단', 'sanghwang'),
-    '총점': ('PSAT 총점', 'psat'),
-    '평균': ('PSAT 평균', 'psat_avg'),
-}
-
-if CURRENT_EXAM == '칠급':
-    PROBLEM_COUNT = {'언어': 25, '자료': 25, '상황': 25}
-    SUBJECT_VARS.pop('헌법')
-else:
-    PROBLEM_COUNT = {'헌법': 25, '언어': 40, '자료': 40, '상황': 40}
-
-# answer_file
-ANSWER_FILE = settings.BASE_DIR / 'a_predict/data/answers.csv'
-EMPTY_FILE = settings.BASE_DIR / 'a_predict/data/answers_empty.csv'
-ANSWER_FILE = ANSWER_FILE if os.path.exists(ANSWER_FILE) else EMPTY_FILE
-ANSWER_FILE_ENCODING = detect_encoding(ANSWER_FILE)
-
-qs_exam = Exam.objects.filter(exam=CURRENT_EXAM)
-qs_unit = Unit.objects.filter(exam=CURRENT_EXAM)
-qs_department = Department.objects.filter(exam=CURRENT_EXAM)
-qs_student = Student.objects.filter(
-    year=CURRENT_YEAR, exam=CURRENT_EXAM, round=CURRENT_ROUND)
-qs_location = Location.objects.filter(year=CURRENT_YEAR, exam=CURRENT_EXAM)
-qs_student_answer = StudentAnswer.objects
-qs_submitted_answer = SubmittedAnswer.objects
+from .base_info import ExamInfo
 
 
 def index_view(request: HtmxHttpRequest):
+    ei = ExamInfo()
     context = {}
 
     if not request.user.is_authenticated:
-        return render(request, 'a_predict/normal/predict_index.html', context)
+        return render(request, 'a_predict/index.html', context)
 
-    student = qs_student.filter(user=request.user).first()
+    student = ei.get_student(request=request)
     if not student:
         return redirect('predict:student-create')
 
@@ -67,38 +25,28 @@ def index_view(request: HtmxHttpRequest):
     }
 
     serial = int(student.serial)
-    location = qs_location.filter(serial_start__lte=serial, serial_end__gte=serial).first()
+    location = ei.get_location(serial=serial)
 
-    data_answer_correct = get_answer_correct(ANSWER_FILE)
+    data_answer_correct = ei.get_answer_correct()
+    data_answer_student, data_answer_count, data_answer_confirmed = ei.get_answer_student(student=student)
 
-    qs_answer_final = qs_student_answer.filter(student=student).first()
-    qs_answer_temp = qs_submitted_answer.filter(student=student)
-    data_answer_student, data_answer_count = get_answer_student(
-        qs_answer_final, qs_answer_temp, SUBJECT_VARS, PROBLEM_COUNT)
-
-    psat_problem_count = sum([val for val in PROBLEM_COUNT.values()])
-    psat_answer_count = sum([val for val in data_answer_count.values()])
+    participants_count = ei.get_participants()
+    problem_count = ei.PROBLEM_COUNT
 
     info_answer_student = {}
     if data_answer_student:
         for sub, answer in data_answer_student.items():
-            subject, sub_eng = SUBJECT_VARS[sub]
-            problem_count = PROBLEM_COUNT[sub]
-
-            answer_count = data_answer_count[sub]
-            is_confirmed = getattr(qs_answer_final, f'{sub_eng}_confirmed')
-
             info_answer_student[sub] = {
                 'icon': icon_set.ICON_SUBJECT[sub],
                 'sub': sub,
-                'sub_eng': sub_eng,
-                'subject': subject,
-                # 'participants': self.participant_count[sub],
-                'problem_count': problem_count,
-                'answer_count': answer_count,
+                'subject': ei.SUBJECT_VARS[sub][0],
+                'sub_eng': ei.SUBJECT_VARS[sub][1],
+                'participants': participants_count[sub],
+                'problem_count': problem_count[sub],
+                'answer_count': data_answer_count[sub],
                 # 'score_virtual': score_virtual[sub],
                 # 'score_real': None,
-                'is_confirmed': is_confirmed,
+                'is_confirmed': data_answer_confirmed[sub],
             }
 
         info_answer_student['평균'] = {
@@ -106,12 +54,12 @@ def index_view(request: HtmxHttpRequest):
             'sub': '평균',
             'sub_eng': 'psat_avg',
             'subject': 'PSAT 평균',
-            # 'participants': self.participant_count[sub],
-            'problem_count': psat_problem_count,
-            'answer_count': psat_answer_count,
+            'participants': max(participants_count),
+            'problem_count': sum([val for val in problem_count.values()]),
+            'answer_count': sum([val for val in data_answer_count.values()]),
             # 'score_virtual': score_virtual[sub],
             # 'score_real': None,
-            'is_confirmed': qs_answer_final.all_confirmed,
+            'is_confirmed': all(data_answer_confirmed),
         }
 
     context = update_context_data(
@@ -119,7 +67,7 @@ def index_view(request: HtmxHttpRequest):
 
         # base info
         info=info,
-        exam=CURRENT_EXAM,
+        exam=ei.EXAM,
         current_time=timezone.now(),
 
         # icons
@@ -147,40 +95,34 @@ def index_view(request: HtmxHttpRequest):
         # filtered_score_student=filtered_score_student,
         # filtered_all_score_stat=filtered_all_score_stat,
     )
-    return render(request, 'a_predict/normal/predict_index.html', context)
+    return render(request, 'a_predict/index.html', context)
 
 
 @login_required
 def student_create_view(request: HtmxHttpRequest):
-    student = qs_student.filter(user=request.user).first()
+    ei = ExamInfo()
+    student = ei.get_student(request=request)
     if student:
         return redirect('predict:index')
 
-    info = {
-        'menu': 'predict',
-        'view_type': 'predict',
-    }
     if request.method == "POST":
         form = predict_forms.StudentForm(request.POST)
         if form.is_valid():
             student = form.save(commit=False)
-            student.year = CURRENT_YEAR
-            student.exam = CURRENT_EXAM
-            student.round = CURRENT_ROUND
-            student.user = request.user
-            student.save()
-            qs_student_answer.get_or_create(student=student)
+            ei.create_student(student=student, request=request)
         else:
             pass
-        return redirect('predict:index')
+        first_sub = '헌법' if '헌법' in ei.PROBLEM_COUNT.keys() else '언어'
+        return redirect('predict:answer-input', first_sub)
 
     else:
         form = predict_forms.StudentForm()
 
+    units = ei.qs_unit.values_list('unit', flat=True)
     context = update_context_data(
         # base info
-        info=info,
-        exam=CURRENT_EXAM,
+        info=ei.INFO,
+        exam=ei.EXAM,
         current_time=timezone.now(),
 
         # icons
@@ -189,7 +131,7 @@ def student_create_view(request: HtmxHttpRequest):
         icon_nav=icon_set.ICON_NAV,
 
         # index_info_student: 수험 정보
-        units=qs_unit.values_list('unit', flat=True),
+        units=units,
         form=form,
     )
 
@@ -199,7 +141,84 @@ def student_create_view(request: HtmxHttpRequest):
 @login_required
 def department_list(request):
     if request.method == 'POST':
+        ei = ExamInfo()
         unit = request.POST.get('unit')
-        departments = qs_department.filter(unit=unit).values_list('department', flat=True)
+        departments = ei.qs_department.filter(unit=unit).values_list('department', flat=True)
         context = update_context_data(departments=departments)
         return render(request, 'a_predict/snippets/department_list.html', context)
+
+
+@login_required
+def answer_input_view(request, sub):
+    ei = ExamInfo()
+
+    problem_count = ei.PROBLEM_COUNT
+    if sub not in problem_count.keys():
+        return redirect('predict:index')
+
+    student = ei.get_student(request=request)
+    if not student:
+        return redirect('predict:student-create')
+
+    field = ei.SUBJECT_VARS[sub][1]
+    qs_answer_final = ei.get_qs_student_answer(student=student)
+    is_confirmed = getattr(qs_answer_final, f'{field}_confirmed')
+    if is_confirmed:
+        return redirect('predict:index')
+
+    answer_student_list = []
+    answer_temp = ei.get_answer_temp(student=student, sub=sub)
+    for i in range(problem_count[sub]):
+        number = i + 1
+        answer_student_list.append({
+            'number': number,
+            # 'ex': ei.EXAM,
+            'sub': sub,
+            'answer_student': answer_temp[i]['ans_number'],
+        })
+
+    context = update_context_data(
+        # base info
+        info=ei.INFO,
+        exam=ei.EXAM,
+        sub=sub,
+        answer_student=answer_student_list,
+    )
+    return render(request, 'a_predict/answer_input.html', context)
+
+
+@login_required
+def answer_submit(request, sub):
+    if request.method == 'POST':
+        ei = ExamInfo()
+        submitted_answer = ei.create_submitted_answer(request, sub)
+        context = update_context_data(sub=sub, submitted_answer=submitted_answer)
+        return render(request, 'a_predict/snippets/scored_form.html', context)
+
+
+@login_required
+def answer_confirm(request, sub):
+    if request.method == 'POST':
+        ei = ExamInfo()
+        subject, field = ei.SUBJECT_VARS[sub]
+
+        student = ei.get_student(request=request)
+        is_confirmed, ans_number_list = ei.get_data_answer_confirmed(student=student, sub=sub)
+
+        student_answer = ei.get_qs_student_answer(student=student)
+        if is_confirmed:
+            answer_string = ','.join(ans_number_list)
+            setattr(student_answer, field, answer_string)
+            setattr(student_answer, f'{field}_confirmed', is_confirmed)
+            student_answer.save()
+
+        next_url = ei.get_next_url(student_answer=student_answer)
+
+        context = update_context_data(
+            header=f'{subject} 답안 제출',
+            is_confirmed=is_confirmed,
+            next_url=next_url,
+        )
+        return render(request, 'a_predict/snippets/modal_answer_confirmed.html', context)
+    else:
+        return redirect('predict:answer-input', sub)

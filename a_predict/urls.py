@@ -22,6 +22,12 @@ student_patterns = [
     path('department/', normal_views.department_list, name='department-list'),
 ]
 
+answer_patterns =[
+    path('<str:sub>/', normal_views.answer_input_view, name='answer-input'),
+    path('<str:sub>/submit/', normal_views.answer_submit, name='answer-submit'),
+    path('<str:sub>/confirm/', normal_views.answer_confirm, name='answer-confirm'),
+]
+
 old_normal_patterns = [
     path('test/', normal_views_old.index_test_view, name='index_test'),
     path('student/', normal_views_old.student_create_view, name='student_create'),
@@ -87,8 +93,7 @@ admin_patterns = [
 urlpatterns = [
     path('', normal_views.index_view, name='index'),
 
-    path('', include(normal_patterns)),
     path('student/', include(student_patterns)),
-    path('old/', include(old_normal_patterns)),
+    path('answer/', include(answer_patterns)),
     path('admin/', include(admin_patterns)),
 ]
