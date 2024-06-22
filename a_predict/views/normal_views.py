@@ -23,56 +23,25 @@ def index_view(request: HtmxHttpRequest):
         'view_type': 'predict',
     }
 
-    serial = int(student.serial)
-    location = ei.get_obj_location(serial=serial)
+    data_answer_correct = ei.get_dict_data_answer_correct()
+    data_answer_rate = ei.get_dict_data_answer_rate(
+        data_answer_correct=data_answer_correct)
 
-    data_answer_correct = ei.get_dict_answer_correct()
-    data_answer_rate = ei.get_dict_answer_rate(data_answer_correct)
+    data_answer_student, data_answer_count, data_answer_confirmed = (
+        ei.get_tuple_data_answer_student(request=request, data_answer_rate=data_answer_rate)
+    )
 
-    data_answer_student, data_answer_count, data_answer_confirmed = ei.get_tuple_answer_student(request=request)
-    data_answer_student = ei.insert_answer_selection(data_answer_rate, data_answer_student)
-
-    participants_count = ei.get_dict_participants_count()
-    problem_count = ei.PROBLEM_COUNT
-
-    info_answer_student = {}
-    if data_answer_student:
-        for sub, answer in data_answer_student.items():
-            try:
-                participants_count[sub]
-            except KeyError:
-                participants_count[sub] = 0
-
-            info_answer_student[sub] = {
-                'icon': icon_set.ICON_SUBJECT[sub],
-                'sub': sub,
-                'subject': ei.SUBJECT_VARS[sub][0],
-                'sub_eng': ei.SUBJECT_VARS[sub][1],
-                'participants': participants_count[sub],
-                'problem_count': problem_count[sub],
-                'answer_count': data_answer_count[sub],
-                # 'score_virtual': score_virtual[sub],
-                # 'score_real': None,
-                'is_confirmed': data_answer_confirmed[sub],
-            }
-
-        info_answer_student['평균'] = {
-            'icon': '',
-            'sub': '평균',
-            'sub_eng': 'psat_avg',
-            'subject': 'PSAT 평균',
-            'participants': participants_count[max(participants_count)],
-            'problem_count': sum([val for val in problem_count.values()]),
-            'answer_count': sum([val for val in data_answer_count.values()]),
-            # 'score_virtual': score_virtual[sub],
-            # 'score_real': None,
-            'is_confirmed': all(data_answer_confirmed),
-        }
+    info_answer_student = ei.get_dict_info_answer_student(
+        data_answer_student=data_answer_student,
+        data_answer_count=data_answer_count,
+        data_answer_confirmed=data_answer_confirmed,
+        data_answer_correct=data_answer_correct,
+    )
 
     context = update_context_data(
         # base info
         info=info,
-        exam=ei.EXAM,
+        exam=ei.qs_exam.first(),
         current_time=timezone.now(),
 
         # icons
@@ -82,14 +51,13 @@ def index_view(request: HtmxHttpRequest):
 
         # index_info_student: 수험 정보
         student=student,
-        location=location,
+        location=ei.get_obj_location(student=student),
 
         # index_info_answer: 답안 제출 현황
         info_answer_student=info_answer_student,
 
         # index_sheet_answer: 답안 확인
         data_answer_correct=data_answer_correct,
-        data_answer_rate=data_answer_rate,
         # data_answer_predict=data_answer['answer_predict'],
         data_answer_student=data_answer_student,
 

@@ -127,6 +127,7 @@ ICON_SUBJECT = {
     '상황': '<i class="fa-solid fa-fw fa-scale-balanced"></i>',
     '헌법': '<i class="fa-solid fa-fw fa-gavel"></i>',
     '피셋': '',
+    '평균': '',
 }
 
 ICON_SEARCH = '<i class="fa-solid fa-fw fa-magnifying-glass"></i>'

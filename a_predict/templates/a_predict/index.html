@@ -39,40 +39,41 @@
 {#            student_id: {{ student.id }}<br/>#}
 {#            exam_id: {{ exam.id }}<br/>#}
 {#            현재 시각: {{ current_time }}<br/>#}
-{#            시험 시작 시각: {{ exam.start_datetime }}<br/>#}
-{#            시험 종료 시각: {{ exam.end_datetime }}<br/>#}
-{#            예상 정답 공개시각: {{ exam.answer_predict_open_datetime }}<br/>#}
-{#            정답 공개 시각: {{ exam.answer_open_datetime }}<br/>#}
+{#            페이지 오픈 시각: {{ exam.page_opened_at }}<br/>#}
+{#            시험 시작 시각: {{ exam.exam_started_at }}<br/>#}
+{#            시험 종료 시각: {{ exam.exam_finished_at }}<br/>#}
+{#            예상 정답 공개 시각: {{ exam.answer_predict_opened_at }}<br/>#}
+{#            공식 정답 공개 시각: {{ exam.answer_official_opened_at }}<br/>#}
 
             <div class="col-12" aria-label="답안 제출 현황">
                 <div id="info_answer" class="card htmx-fade-in htmx-fade-out">
                     {% include 'a_predict/snippets/index_info_answer.html' %}
                 </div>
             </div>
-            {% if current_time > exam.answer_open_datetime %}
+            {% if current_time > exam.answer_official_opened_at %}
                 <div class="col-12" aria-label="성적 예측 I [전체 데이터]">
                     <div id="sheet_score" class="card htmx-fade-in htmx-fade-out">
-                        {% include 'a_predict/normal/snippets/index_sheet_score.html' %}
+                        {% include 'a_predict/snippets/index_sheet_score.html' %}
                     </div>
                 </div>
                 {% if filtered_score_student %}
                     <div class="col-12" aria-label="성적 예측 II [정답 공개 전 데이터]">
                         <div id="sheet_score" class="card htmx-fade-in htmx-fade-out">
-                            {% include 'a_predict/normal/snippets/index_sheet_score_filtered.html' %}
+                            {% include 'a_predict/snippets/index_sheet_score_filtered.html' %}
                         </div>
                     </div>
                 {% endif %}
             {% endif %}
-            {% if current_time > exam.end_datetime and current_time < exam.answer_open_datetime %}
+            {% if current_time > exam.exam_finished_at and current_time < exam.answer_official_opened_at %}
                 <div class="col-12" aria-label="예상 정답">
                     <div id="info_student" class="card htmx-fade-in htmx-fade-out">
-                        {% include 'a_predict/normal/snippets/index_sheet_answer_predict.html' %}
+                        {% include 'a_predict/snippets/index_sheet_answer_predict.html' %}
                     </div>
                 </div>
             {% endif %}
             <div class="col-12" aria-label="정답 확인">
                 <div id="sheet_answer" class="card htmx-fade-in htmx-fade-out">
-                    {% include 'a_predict/normal/snippets/index_sheet_answer.html' %}
+                    {% include 'a_predict/snippets/index_sheet_answer.html' %}
                 </div>
             </div>
         </div>

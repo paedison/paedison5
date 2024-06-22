@@ -7,8 +7,12 @@ from django.db.models import Count, QuerySet
 from django.urls import reverse_lazy
 from pandas import DataFrame
 
+from a_common.constants import icon_set
 from a_common.utils import detect_encoding, HtmxHttpRequest
-from a_predict.models import Student, Location, StudentAnswer, SubmittedAnswer, Unit, Department, AnswerCount
+from a_predict.models import (
+    Exam, Unit, Department, Location,
+    Student, StudentAnswer, SubmittedAnswer, AnswerCount,
+)
 
 
 class ExamInfo:
@@ -55,6 +59,7 @@ class ExamInfo:
     }
 
     # Queryset variables
+    qs_exam = Exam.objects.filter(exam=EXAM, round=ROUND)
     qs_unit = Unit.objects.filter(exam=EXAM)
     qs_department = Department.objects.filter(exam=EXAM)
     qs_location = Location.objects.filter(year=YEAR, exam=EXAM)
@@ -78,7 +83,8 @@ class ExamInfo:
     def get_obj_student(self, request: HtmxHttpRequest) -> Student:
         return self.qs_student.filter(user=request.user).first()
 
-    def get_obj_location(self, serial: int) -> Location:
+    def get_obj_location(self, student: Student) -> Location:
+        serial = int(student.serial)
         return self.qs_location.filter(serial_start__lte=serial, serial_end__gte=serial).first()
 
     def get_obj_student_answer(self, request: HtmxHttpRequest) -> StudentAnswer:
@@ -89,7 +95,7 @@ class ExamInfo:
             count=Count('student', distinct=True))
         return {p['subject']: p['count'] for p in qs_participants_count}
 
-    def get_dict_answer_correct(self) -> dict:
+    def get_dict_data_answer_correct(self) -> dict:
         # {
         #     '헌법': [
         #         {
@@ -158,28 +164,36 @@ class ExamInfo:
         answer_final: list[dict] = queryset.get_answer_list(subject_field=field)
         return answer_final, is_confirmed
 
-    def get_tuple_answer_student(
-            self, request: HtmxHttpRequest
+    def get_tuple_data_answer_student(
+            self, request: HtmxHttpRequest,
+            data_answer_rate: dict,
     ) -> tuple[dict[str, list], dict[str, int], dict[str, bool]]:
         qs_answer_final: StudentAnswer = self.get_obj_student_answer(request=request)
         qs_answer_temp: QuerySet[SubmittedAnswer] = self.qs_submitted_answer.filter(student__user=request.user)
 
-        answer_student: dict[str, list] = {}
-        answer_count: dict[str, int] = {}
-        answer_confirmed: dict[str, bool] = {}
+        data_answer_student: dict[str, list] = {}
+        data_answer_count: dict[str, int] = {}
+        data_answer_confirmed: dict[str, bool] = {}
         for sub, count in self.PROBLEM_COUNT.items():
             answer_list, is_confirmed = self.get_tuple_answer_final(request=request, sub=sub, queryset=qs_answer_final)
             if not is_confirmed:
                 answer_list = self.get_list_answer_temp(request=request, sub=sub, queryset=qs_answer_temp)
-            answer_student[sub] = answer_list
+            data_answer_student[sub] = answer_list
 
-            answer_count[sub] = 0
+            data_answer_count[sub] = 0
             for a in answer_list:
-                answer_count[sub] += 1 if a['ans_number'] != '' else 0
+                data_answer_count[sub] += 1 if a['ans_number'] != '' else 0
 
-            answer_confirmed[sub] = is_confirmed
+            data_answer_confirmed[sub] = is_confirmed
 
-        return answer_student, answer_count, answer_confirmed
+        for sub, value in data_answer_student.items():
+            for answer_student in value:
+                number = answer_student['number']
+                ans_number = answer_student['ans_number']
+                answer_rate: AnswerCount = data_answer_rate[sub][number - 1]
+                answer_student['rate_selection'] = getattr(answer_rate, f'rate_{ans_number}')
+
+        return data_answer_student, data_answer_count, data_answer_confirmed
 
     def create_submitted_answer(self, request: HtmxHttpRequest, sub: str) -> SubmittedAnswer:
         student = self.get_obj_student(request=request)
@@ -240,7 +254,7 @@ class ExamInfo:
                     }
                 )
 
-    def get_dict_answer_rate(self, data_answer_correct: dict) -> dict:
+    def get_dict_data_answer_rate(self, data_answer_correct: dict) -> dict:
         qs_answer_count: QuerySet[AnswerCount] = self.qs_answer_count.order_by('subject', 'number')
         dict_answer_count = {}
         for sub in self.PROBLEM_COUNT.keys():
@@ -248,18 +262,83 @@ class ExamInfo:
 
         qs: AnswerCount
         for qs in qs_answer_count:
-            answer_correct = data_answer_correct[qs.subject][qs.number - 1]['ans_number']
-            qs.rate_correct = getattr(qs, f'rate_{answer_correct}')
+            answer_correct = data_answer_correct[qs.subject][qs.number - 1]
+            ans_correct = answer_correct['ans_number']
+            qs.rate_correct = getattr(qs, f'rate_{ans_correct}')
+            answer_correct['rate_correct'] = getattr(qs, f'rate_{ans_correct}')
+
             dict_answer_count[qs.subject].append(qs)
 
         return dict_answer_count
 
-    @staticmethod
-    def insert_answer_selection(data_answer_rate: dict, data_answer_student: dict) -> dict:
-        for sub, value in data_answer_student.items():
-            for answer_student in value:
-                number = answer_student['number']
-                ans_number = answer_student['ans_number']
-                answer_rate: AnswerCount = data_answer_rate[sub][number - 1]
-                answer_student['rate_selection'] = getattr(answer_rate, f'rate_{ans_number}')
-        return data_answer_student
+    def get_dict_info_answer_student_empty(self, sub):
+        return {
+            'icon': icon_set.ICON_SUBJECT[sub],
+            'sub': sub,
+            'subject': self.SUBJECT_VARS[sub][0],
+            'sub_eng': self.SUBJECT_VARS[sub][1],
+        }
+
+    def get_dict_info_answer_student(
+            self,
+            data_answer_student: dict,
+            data_answer_count: dict,
+            data_answer_confirmed: dict,
+            data_answer_correct: dict,
+    ) -> dict:
+        participants_count = self.get_dict_participants_count()
+        info_answer_student = {}
+        if data_answer_student:
+            total_score_real = 0
+            for sub, value in data_answer_student.items():
+                problem_count = self.PROBLEM_COUNT[sub]
+                answer_count = data_answer_count[sub]
+                is_confirmed = data_answer_confirmed[sub]
+
+                try:
+                    participants = participants_count[sub]
+                except KeyError:
+                    participants = 0
+
+                correct_count = 0
+                for answer_student in value:
+                    idx = answer_student['number'] - 1
+                    ans_student = answer_student['ans_number']
+                    ans_correct = data_answer_correct[sub][idx]['ans_number']
+
+                    try:
+                        ans_correct_list = data_answer_correct[sub][idx]['ans_number_list']
+                    except KeyError:
+                        ans_correct_list = None
+
+                    result = 'X'
+                    if ans_correct_list and ans_student in ans_correct_list:
+                        result = 'O'
+                    if ans_student == ans_correct:
+                        result = 'O'
+                    answer_student['result'] = result
+                    correct_count += 1 if result == 'O' else 0
+
+                score_real = correct_count * 100 / problem_count
+                total_score_real += score_real
+
+                info_answer_student[sub] = self.get_dict_info_answer_student_empty(sub)
+                info_answer_student[sub].update({
+                    'problem_count': problem_count,
+                    'participants': participants,
+                    'answer_count': answer_count,
+                    # 'score_virtual': score_virtual[sub],
+                    'score_real': correct_count * 100 / problem_count,
+                    'is_confirmed': is_confirmed,
+                })
+
+            info_answer_student['평균'] = self.get_dict_info_answer_student_empty('평균')
+            info_answer_student['평균'].update({
+                'participants': participants_count[max(participants_count)],
+                'problem_count': sum([val for val in self.PROBLEM_COUNT.values()]),
+                'answer_count': sum([val for val in data_answer_count.values()]),
+                # 'score_virtual': score_virtual[sub],
+                'score_real': total_score_real / len(self.PROBLEM_COUNT),
+                'is_confirmed': all(data_answer_confirmed),
+            })
+        return info_answer_student

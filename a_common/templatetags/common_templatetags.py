@@ -22,3 +22,10 @@ def to_int(value) -> int:
         return int(value)
     except (ValueError, TypeError):
         return 0  # or handle the error as needed
+
+
+@register.filter
+def percentage(content) -> float:  # Abstract content from base
+    if content:
+        return content * 100
+    return 0

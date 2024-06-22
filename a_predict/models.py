@@ -102,6 +102,9 @@ class Exam(TimeRemarkChoiceBase):
     class Meta:
         unique_together = ['exam', 'round']
 
+    def __str__(self):
+        return self.exam
+
     # @property
     # def answer_file(self):
     #     return os.path.join(data_dir, f"answer_file_{self.category}_{self.year}{self.ex}-{self.round}.csv")
