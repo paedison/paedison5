@@ -1,6 +1,6 @@
 import csv
 
-from a_predict import models as predict_models
+from a_predict.models import Student, StudentAnswer, SubmittedAnswer
 
 
 def write_csv(filename, fieldnames, rows):
@@ -13,7 +13,7 @@ def write_csv(filename, fieldnames, rows):
 
 
 def run():
-    students = predict_models.Student.objects.all()
+    students = Student.objects.all()
     subject_list = {
         '헌법': 'heonbeob',
         '언어': 'eoneo',
@@ -21,14 +21,14 @@ def run():
         '상황': 'sanghwang',
     }
     for student in students:
-        student_answer, created = predict_models.StudentAnswer.objects.get_or_create(student=student)
+        student_answer, created = StudentAnswer.objects.get_or_create(student=student)
 
         for subject, field in subject_list.items():
             problem_count = 40
             if student.exam == '칠급' or subject == '헌법':
                 problem_count = 25
 
-            submitted_answers = predict_models.SubmittedAnswer.objects.filter(
+            submitted_answers = SubmittedAnswer.objects.filter(
                 student=student, subject=subject
             ).order_by('number').values('number', 'answer')
 

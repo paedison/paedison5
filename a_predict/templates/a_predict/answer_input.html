@@ -91,7 +91,7 @@
                                hx-trigger="change"
                                hx-post="{% url 'predict:answer-submit' sub %}"/>
                         <label class="btn btn-circle btn-sm fs-6
-                               {% if i|to_int == problem.answer_student %}btn-primary
+                               {% if i|to_int == problem.ans_number %}btn-primary
                                {% else %} btn-outline-secondary{% endif %}"
                                for="p{{ problem.number|stringformat:'02d' }}_answer{{ i }}">
                             {{ i }}</label>

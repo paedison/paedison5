@@ -197,8 +197,8 @@ class StudentAnswer(TimeRemarkChoiceBase):
             confirmed_list.append(self.heonbeob_confirmed)
         return all(confirmed_list)
 
-    def get_answer_list(self, subject: str) -> list:
-        ans_str: str = getattr(self, subject)
+    def get_answer_list(self, subject_field: str) -> list[dict]:
+        ans_str: str = getattr(self, subject_field)
         ans_str_list = ans_str.split(',') if ans_str else []
         answer_list = []
         for idx, val in enumerate(ans_str_list):
@@ -308,7 +308,7 @@ class AnswerCountBase(TimeChoiceBase):
 
     def get_rate(self, answer: int | None):
         if self.count_total != 0:
-            return getattr(self, f'count_{answer}') / self.count_total
+            return getattr(self, f'count_{answer}') / self.count_total * 100
 
     @property
     def rate_0(self):

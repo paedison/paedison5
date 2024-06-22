@@ -37,6 +37,7 @@
         {% for id in '0123' %}
             {% cycle '헌법' '언어' '자료' '상황' as sub silent %}
             {% cycle data_answer_correct.헌법 data_answer_correct.언어 data_answer_correct.자료 data_answer_correct.상황 as answer_correct silent %}
+            {% cycle data_answer_rate.헌법 data_answer_rate.언어 data_answer_rate.자료 data_answer_rate.상황 as answer_rate silent %}
             {% cycle data_answer_student.헌법 data_answer_student.언어 data_answer_student.자료 data_answer_student.상황 as answer_student silent %}
             {% cycle info_answer_student.헌법 info_answer_student.언어 info_answer_student.자료 info_answer_student.상황 as info_answer silent %}
             <div id="navContent{{ sub }}{{ id }}"
@@ -140,7 +141,7 @@
         </tr>
         <tr class="text-center" aria-label="정답률">
             <th class="text-nowrap" scope="row">정답률(%)</th>
-            {% for answer in answer_correct %}
+            {% for answer in answer_rate %}
                 {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                     <td>
                         <div data-number="{{ answer.number }}" class="fw-bold text-success">

@@ -23,151 +23,93 @@ def parse_remarks_text_to_dict(remarks_text):
     return result_list
 
 
-class StudentModelTestsWithNoStudent(ExamInfo, TestCase):
+class BaseSetUp(ExamInfo, TestCase):
     def setUp(self):
-        self.unit = '5급공채 행정(전국)'
-        self.department = '일반행정'
-        self.serial = '10000001'
-        self.name = '테스트'
-        self.password = '0'
-        self.prime_id = 'paedison'
-        self.department_list = [
+        self.test_student_var = {
+            'unit': '5급공채 행정(전국)',
+            'department': '일반행정',
+            'serial': '10000001',
+            'name': '테스트',
+            'password': 0,
+            'prime_id': 'paedison',
+        }
+        self.test_sub_var = {
+            'sub': '헌법',
+            'field': self.SUBJECT_VARS['헌법'][1]
+        }
+
+        department_list = [
             '일반행정', '인사조직', '법무행정', '재경', '국제통상', '교육행정', '사회복지', '교정', '보호', '검찰'
         ]
-
-        self.sub = '언어'
-
         department_create_list = []
-        for index, department in enumerate(self.department_list):
+        for index, department in enumerate(department_list):
             department_create_list.append(Department(
                 **{
                     'exam': self.EXAM,
-                    'unit': self.unit,
+                    'unit': self.test_student_var['unit'],
                     'department': department,
                     'order': index + 1,
                 }
             ))
         Department.objects.bulk_create(department_create_list)
 
-        self.user = User.objects.create_user(
-            username='testuser', password='password', email='test@mail.com')
-        self.client.force_login(self.user)
+        self.test_user = User.objects.create_user(username='test', password='password', email='test@mail.com')
+        self.client.force_login(self.test_user)
 
         self.response_index_page = self.client.get(reverse('predict:index'))
         self.response_student_create_page = self.client.get(reverse('predict:student-create'))
 
-    # @classmethod
-    # def setUpTestData(cls):
-    #     exam_list = ['행시', '입시', '칠급']
-    #     subject_list = ['헌법', '언어', '자료', '상황']
-    #     for exam in exam_list:
-    #         problem_count = 25 if exam == '칠급' else 40
-    #         subject_list = subject_list[1:] if exam == '칠급' else subject_list
-    #         for subject in subject_list:
-    #             problem_count = 25 if subject == '헌법' else problem_count
-    #             for i in range(1, problem_count + 1):
-    #                 answer = random.randint(1, 5)
-    #                 Problem.objects.create(
-    #                     year=2024, exam=exam, subject=subject,
-    #                     number=i, answer=answer,
-    #                     question=f'문제{i}', data=f'데이터{i}',
-    #                 )
+    def get_obj_test_student(self) -> Student:
+        return Student.objects.filter(
+            year=self.YEAR, exam=self.EXAM, round=self.ROUND, user=self.test_user).first()
 
-    def get_test_student(self):
-        return Student.objects.filter(year=self.YEAR, exam=self.EXAM, round=self.ROUND, user=self.user).first()
+    def get_obj_test_student_answer(self) -> StudentAnswer:
+        return StudentAnswer.objects.filter(
+            student__year=self.YEAR,
+            student__exam=self.EXAM,
+            student__round=self.ROUND,
+            student__user=self.test_user).first()
 
-    @staticmethod
-    def get_test_student_answer(student) -> StudentAnswer:
-        return StudentAnswer.objects.filter(student=student).first()
 
+class StudentModelTestsWithNoStudent(BaseSetUp):
     def test_redirect_to_student_create_page(self):
         self.assertRedirects(self.response_index_page, reverse('predict:student-create'))
 
     def test_department_list(self):
-        response = self.client.post(reverse('predict:department-list'), data={'unit': self.unit})
-        departments = Department.objects.filter(exam=self.EXAM, unit=self.unit).values_list('department', flat=True)
+        unit = self.test_student_var['unit']
+        response = self.client.post(reverse('predict:department-list'), data={'unit': unit})
+        departments = Department.objects.filter(exam=self.EXAM, unit=unit).values_list('department', flat=True)
         self.assertEqual(list(response.context['departments']), list(departments))
 
     def test_student_create_view(self):
-        post_data = {
-            'unit': self.unit,
-            'department': self.department,
-            'serial': self.serial,
-            'name': self.name,
-            'password': self.password,
-            'prime_id': self.prime_id,
-        }
-        response = self.client.post(reverse('predict:student-create'), data=post_data)
+        response = self.client.post(reverse('predict:student-create'), data=self.test_student_var)
 
-        student = self.get_test_student()
-        self.assertEqual(student.unit, post_data['unit'])
-        self.assertEqual(student.department, post_data['department'])
-        self.assertEqual(student.serial, post_data['serial'])
-        self.assertEqual(student.name, post_data['name'])
-        self.assertEqual(student.password, int(post_data['password']))
-        self.assertEqual(student.prime_id, post_data['prime_id'])
+        student = self.get_obj_test_student()
+        for key, value in self.test_student_var.items():
+            self.assertEqual(getattr(student, key), value)
 
-        student_answer: StudentAnswer = self.get_test_student_answer(student)
+        student_answer = self.get_obj_test_student_answer()
         self.assertTrue(student_answer)
         self.assertFalse(student_answer.heonbeob_confirmed)
         self.assertRedirects(response, reverse('predict:answer-input', args=['헌법']))
 
 
-class StudentModelTestsWithStudent(ExamInfo, TestCase):
+class StudentModelTestsWithStudent(BaseSetUp):
     def setUp(self):
-        self.unit = '5급공채 행정(전국)'
-        self.department = '일반행정'
-        self.serial = '10000001'
-        self.name = '테스트'
-        self.password = '0'
-        self.prime_id = 'paedison'
-        self.department_list = [
-            '일반행정', '인사조직', '법무행정', '재경', '국제통상', '교육행정', '사회복지', '교정', '보호', '검찰'
-        ]
-
-        self.sub = '언어'
-        self.field = self.SUBJECT_VARS[self.sub][1]
-
-        department_create_list = []
-        for index, department in enumerate(self.department_list):
-            department_create_list.append(Department(
-                **{
-                    'exam': self.EXAM,
-                    'unit': self.unit,
-                    'department': department,
-                    'order': index + 1,
-                }
-            ))
-        Department.objects.bulk_create(department_create_list)
-
-        self.user = User.objects.create_user(
-            username='testuser', password='password', email='test@mail.com')
-        self.client.force_login(self.user)
+        super().setUp()
 
         self.student = Student.objects.create(
-            year=self.YEAR, exam=self.EXAM, round=self.ROUND, user=self.user,
-            name=self.name, serial=self.serial, unit=self.unit, department=self.department,
-            password=self.password, prime_id=self.prime_id,
-        )
+            year=self.YEAR, exam=self.EXAM, round=self.ROUND, user=self.test_user, **self.test_student_var)
         StudentAnswer.objects.create(student=self.student)
 
-        self.response_index_page = self.client.get(reverse('predict:index'))
-        self.response_student_create_page = self.client.get(reverse('predict:student-create'))
-
-    def get_test_student(self):
-        return Student.objects.filter(year=self.YEAR, exam=self.EXAM, round=self.ROUND, user=self.user).first()
-
-    @staticmethod
-    def get_test_student_answer(student) -> StudentAnswer:
-        return StudentAnswer.objects.filter(student=student).first()
-
     def test_answer_submit(self):
-        student = self.get_test_student()
-        student_answer = self.get_test_student_answer(student)
+        student = self.get_obj_test_student()
+        student_answer = self.get_obj_test_student_answer()
 
-        post_data = {'sub': self.sub, 'number': '1', 'answer': '1'}
-        response = self.client.post(reverse('predict:answer-submit', args=[self.sub]), data=post_data)
-        submitted_answer = SubmittedAnswer.objects.get(student=student, subject=self.sub, number=1)
+        sub = self.test_sub_var['sub']
+        post_data = {'sub': sub, 'number': '1', 'answer': '1'}
+        response = self.client.post(reverse('predict:answer-submit', args=[sub]), data=post_data)
+        submitted_answer = SubmittedAnswer.objects.get(student=student, subject=sub, number=1)
         self.assertEqual(submitted_answer.number, 1)
         self.assertEqual(submitted_answer.answer, 1)
 
@@ -332,4 +274,4 @@ class StudentModelTestsWithStudent(ExamInfo, TestCase):
     #
     def tearDown(self):
         self.client.logout()
-        self.user.delete()
+        self.test_user.delete()
