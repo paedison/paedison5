@@ -3,7 +3,7 @@ import os
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Count
 from django.urls import reverse_lazy
 
 from a_common.utils import detect_encoding, HtmxHttpRequest
@@ -12,7 +12,7 @@ from a_predict.models import Student, Location, StudentAnswer, SubmittedAnswer, 
 
 class ExamInfo:
     # Target Exam
-    YEAR = 2025
+    YEAR = 2024
     EXAM = '행시'
     ROUND = 0
 
@@ -80,20 +80,15 @@ class ExamInfo:
     def get_qs_student_answer(self, student: Student) -> StudentAnswer:
         return self.qs_student_answer.filter(student=student).first()
 
-    def get_submitted_answer(self, student: Student) -> SubmittedAnswer:
+    def get_qs_submitted_answer(self, student: Student) -> SubmittedAnswer:
         return self.qs_submitted_answer.filter(student=student)
 
     def get_participants(self) -> dict:
-        def get_participants_by_subject(subject: str) -> int:
-            return SubmittedAnswer.objects.filter(
-                student__year=self.YEAR, student__exam=self.EXAM, student__round=self.ROUND, subject=subject,
-            ).values_list('student').distinct().count()
-
-        participants_count = {}
-        for sub in self.PROBLEM_COUNT.keys():
-            participants_count[sub] = get_participants_by_subject(sub)
-
-        return participants_count
+        qs_participants = SubmittedAnswer.objects.filter(
+            student__year=self.YEAR, student__exam=self.EXAM, student__round=self.ROUND,
+        ).values('subject').annotate(count=Count('student', distinct=True))
+        participants = {p['subject']: p['count'] for p in qs_participants}
+        return participants
 
     def get_answer_correct(self) -> dict:
         # {
@@ -144,7 +139,7 @@ class ExamInfo:
 
     def get_answer_student(self, student: Student) -> tuple[dict, dict, dict]:
         qs_answer_final = self.get_qs_student_answer(student=student)
-        qs_answer_temp = self.get_submitted_answer(student=student)
+        qs_answer_temp = self.get_qs_submitted_answer(student=student)
 
         def get_answer_student_by_subject(subject: str) -> tuple[list, int, bool]:
             field = self.SUBJECT_VARS[subject][1]

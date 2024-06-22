@@ -54,7 +54,7 @@ def index_view(request: HtmxHttpRequest):
             'sub': '평균',
             'sub_eng': 'psat_avg',
             'subject': 'PSAT 평균',
-            'participants': max(participants_count),
+            'participants': participants_count[max(participants_count)],
             'problem_count': sum([val for val in problem_count.values()]),
             'answer_count': sum([val for val in data_answer_count.values()]),
             # 'score_virtual': score_virtual[sub],
