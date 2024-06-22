@@ -160,6 +160,21 @@ class Student(TimeRemarkChoiceBase):
         return f'{self.year}{self.exam}{self.round}({self.unit}-{self.department})_{self.user.username}'
 
 
+class OfficialAnswer(TimeRemarkChoiceBase):
+    year = models.IntegerField(choices=year_choice, default=datetime.now().year)
+    exam = models.CharField(max_length=2, choices=ExamChoice)
+    round = models.IntegerField(default=0)  # 0 for '행시, 입시, 칠급', round number for '프모'
+
+    heonbeob = models.TextField(default='')
+    eoneo = models.TextField(default='')
+    jaryo = models.TextField(default='')
+    sanghwang = models.TextField(default='')
+
+    class Meta:
+        unique_together = ['year', 'exam', 'round']
+        db_table = 'a_predict_official_answer'
+
+
 class SubmittedAnswer(TimeRemarkChoiceBase):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='submitted_answers')
     subject = models.CharField(max_length=2, choices=SubjectChoice)
