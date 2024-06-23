@@ -18,19 +18,19 @@
     <div class="tab-content" id="scoreSheetContent">
         {% #nav_content prefix='filtered_my' id='0' %}
             {% with score_student_data=filtered_score_student prefix='filtered_' %}
-                {% include 'predict/v1/normal/snippets/index_sheet_score_table_1.html' %}
+                {% include 'a_predict/snippets/index_sheet_score_table_1.html' %}
             {% endwith %}
         {% /nav_content %}
 
         {% #nav_content prefix='filtered_all' id='1' %}
             {% with prefix='filtered_all' score_stat=filtered_all_score_stat.전체 %}
-                {% include 'predict/v1/normal/snippets/index_sheet_score_table_2.html' %}
+                {% include 'a_predict/snippets/index_sheet_score_table_2.html' %}
             {% endwith %}
         {% /nav_content %}
 
         {% #nav_content prefix='filtered_department' id='2' %}
             {% with prefix='filtered_department' score_stat=filtered_all_score_stat.직렬 %}
-                {% include 'predict/v1/normal/snippets/index_sheet_score_table_2.html' %}
+                {% include 'a_predict/snippets/index_sheet_score_table_2.html' %}
             {% endwith %}
         {% /nav_content %}
 

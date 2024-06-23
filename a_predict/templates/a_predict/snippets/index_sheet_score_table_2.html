@@ -21,40 +21,38 @@
             </tr>
         </thead>
         <tbody>
-            {% with score_data=score_student.헌법 stat_data=score_stat.헌법 %}
-                {% partial sub_stat_line %}
-            {% endwith %}
-            {% with score_data=score_student.언어 stat_data=score_stat.언어 %}
-                {% partial sub_stat_line %}
-            {% endwith %}
-            {% with score_data=score_student.자료 stat_data=score_stat.자료 %}
-                {% partial sub_stat_line %}
-            {% endwith %}
-            {% with score_data=score_student.상황 stat_data=score_stat.상황 %}
-                {% partial sub_stat_line %}
-            {% endwith %}
-            {% with score_data=score_student.피셋 stat_data=score_stat.피셋 %}
-                {% partial sub_stat_line %}
-            {% endwith %}
+            {% for _ in '01234' %}
+                {% cycle info_answer_student.heonbeob info_answer_student.eoneo info_answer_student.jaryo info_answer_student.sanghwang info_answer_student.psat_avg as info_answer silent %}
+                {% if prefix == 'all' %}
+                    {% cycle statistics.rank_total.heonbeob statistics.rank_total.eoneo statistics.rank_total.jaryo statistics.rank_total.sanghwang statistics.rank_total.psat_avg as rank silent %}
+                    {% cycle statistics.participants_total.heonbeob statistics.participants_total.eoneo statistics.participants_total.jaryo statistics.participants_total.sanghwang statistics.participants_total.psat_avg as participants silent %}
+                {% else %}
+                    {% cycle statistics.rank_department.heonbeob statistics.rank_department.eoneo statistics.rank_department.jaryo statistics.rank_department.sanghwang statistics.rank_department.psat_avg as rank silent %}
+                    {% cycle statistics.participants_department.heonbeob statistics.participants_department.eoneo statistics.participants_department.jaryo statistics.participants_department.sanghwang statistics.participants_department.psat_avg as participants silent %}
+                {% endif %}
+                {% cycle stat_data.heonbeob stat_data.eoneo stat_data.jaryo stat_data.sanghwang stat_data.psat_avg as stat silent %}
+                {% if info_answer %}{% partial sub_stat_line %}{% endif %}
+            {% endfor %}
         </tbody>
     </table>
 </article>
 
 {% partialdef sub_stat_line %}
-    <tr class="text-center {% if score_data.sub == '피셋' %}table-warning{% endif %}">
-        {% if not score_data.is_confirmed %}
-            <th class="text-nowrap">
-                {% if score_data.sub == '피셋' %}
-                    {{ score_data.icon|safe }} {{ score_data.subject }}
-                {% else %}
-                    <a class="text-decoration-none" hx-boost="true"
-                       href="">
-                        {{ score_data.icon|safe }} {{ score_data.subject }}
-                    </a>
-                {% endif %}
-            </th>
+    <tr class="text-center {% if info_answer.sub == '피셋' %}table-warning{% endif %}">
+        <th class="text-nowrap" aria-label="과목">
+            {% if info_answer.is_confirmed or info_answer.sub == '피셋' %}
+                {{ info_answer.icon|safe }} {{ info_answer.subject }}
+            {% else %}
+                <a class="text-decoration-none"
+                   href="" hx-boost="true">
+                    {{ info_answer.icon|safe }} {{ info_answer.subject }}
+                </a>
+            {% endif %}
+        </th>
+
+        {% if not info_answer.is_confirmed %}
             <td colspan="6">
-                {% if score_data.sub == '피셋' %}
+                {% if info_answer.sub == '피셋' %}
                     <span class="badge rounded-pill bg-danger">답안을 제출해주세요.</span>
                 {% else %}
                     <a hx-boost="true"
@@ -64,41 +62,40 @@
                 {% endif %}
             </td>
         {% else %}
-            <th class="text-nowrap">{{ score_data.icon|safe }} {{ score_data.subject }}</th>
             <td>
-                <div id="{{ prefix }}_score_{{ stat_data.sub }}"
+                <div id="{{ prefix }}_score_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-0">
-                    {{ score_data.score|floatformat:1 }}
+                    {{ stat.score|floatformat:1 }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}_num_students_{{ stat_data.sub }}"
+                <div id="{{ prefix }}_num_students_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-1">
-                    {{ stat_data.num_students }}
+                    {{ stat.participants }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}_max_score_{{ stat_data.sub }}"
+                <div id="{{ prefix }}_max_score_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-2">
-                    {{ stat_data.max_score|floatformat:1 }}
+                    {{ stat.max_score|floatformat:1 }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}_top_score_10_{{ stat_data.sub }}"
+                <div id="{{ prefix }}_top_score_10_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-3">
-                    {{ stat_data.top_score_10|floatformat:1 }}
+                    {{ stat.top_score_10|floatformat:1 }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}_top_score_20_{{ stat_data.sub }}"
+                <div id="{{ prefix }}_top_score_20_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-4">
-                    {{ stat_data.top_score_20|floatformat:1 }}
+                    {{ stat.top_score_20|floatformat:1 }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}_avg_score_{{ stat_data.sub }}"
+                <div id="{{ prefix }}_avg_score_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-5">
-                    {{ stat_data.avg_score|floatformat:1 }}
+                    {{ stat.avg_score|floatformat:1 }}
                 </div>
             </td>
         {% endif %}

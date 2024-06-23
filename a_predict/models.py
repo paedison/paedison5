@@ -393,6 +393,12 @@ class AnswerCountLowRank(AnswerCountBase):
 class StatisticsBase(TimeRecordField):
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
 
+    score = models.JSONField(default=dict)
+    rank_total = models.JSONField(default=dict)
+    rank_department = models.JSONField(default=dict)
+    participants_total = models.JSONField(default=dict)
+    participants_department = models.JSONField(default=dict)
+
     score_heonbeob = models.FloatField(null=True, blank=True)
     score_eoneo = models.FloatField(null=True, blank=True)
     score_jaryo = models.FloatField(null=True, blank=True)

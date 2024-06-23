@@ -34,20 +34,3 @@ def run():
         update_list, ['answer']
     )
     print(f'{len(update_list)} OfficialAnswer objects successfully updated.')
-
-    qs_student_answers = StudentAnswer.objects.all()
-    update_list = []
-    for qs in qs_student_answers:
-        qs.answer = get_dict_answer(qs)
-
-        confirmed_dict = {}
-        for subject in SUBJECTS:
-            is_confirmed = getattr(qs, f'{subject}_confirmed')
-            confirmed_dict.update({subject: is_confirmed})
-        qs.answer_confirmed = confirmed_dict
-        update_list.append(qs)
-
-    StudentAnswer.objects.bulk_update(
-        update_list, ['answer', 'answer_confirmed']
-    )
-    print(f'{len(update_list)} StudentAnswer objects successfully updated.')

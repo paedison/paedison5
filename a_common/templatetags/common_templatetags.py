@@ -25,7 +25,14 @@ def to_int(value) -> int:
 
 
 @register.filter
-def percentage(content) -> float:  # Abstract content from base
+def percentage(content) -> float:
     if content:
         return content * 100
     return 0
+
+
+@register.filter
+def percentageby(content, arg: int) -> float | str:
+    if content:
+        return content * 100 / arg
+    return '-'

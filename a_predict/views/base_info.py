@@ -10,8 +10,9 @@ from pandas import DataFrame
 from a_common.constants import icon_set
 from a_common.utils import detect_encoding, HtmxHttpRequest
 from a_predict.models import (
-    Exam, Unit, Department, Location,
-    Student, StudentAnswer, SubmittedAnswer, AnswerCount, OfficialAnswer,
+    Exam, Unit, Department, Location, Student,
+    StudentAnswer, SubmittedAnswer, AnswerCount, OfficialAnswer,
+    Statistics,
 )
 
 
@@ -333,3 +334,38 @@ class ExamInfo:
                 'is_confirmed': all(data_answer_confirmed),
             })
         return info_answer_student
+
+    def get_dict_stat_data(self, student: Student, statistics_type: str):
+        filter_exp = {
+            'student__year': student.year,
+            'student__exam': student.exam,
+            'student__round': student.round,
+        }
+        if statistics_type == 'department':
+            filter_exp['student__department'] = student.department
+        queryset = Statistics.objects.filter(**filter_exp).values('score')
+
+        score = {}
+        stat_data = {}
+        fields = list(self.PROBLEM_COUNT.keys())
+        fields.append('psat_avg')
+        for field in fields:
+            score[field] = []
+            for qs in queryset:
+                if field in qs['score'].keys():
+                    score[field].append(qs['score'][field])
+
+            num_scores = len(score[field])
+            sorted_scores = sorted(score[field], reverse=True)
+            top_10_threshold = max(1, int(num_scores * 0.1))
+            top_20_threshold = max(1, int(num_scores * 0.2))
+
+            stat_data[field] = {
+                'score': student.statistics.score[field],
+                'participants': num_scores,
+                'max_score': sorted_scores[0],
+                'top_score_10': sorted_scores[top_10_threshold - 1],
+                'top_score_20': sorted_scores[top_20_threshold - 1],
+                'avg_score': sum(score[field]) / num_scores,
+            }
+        return stat_data

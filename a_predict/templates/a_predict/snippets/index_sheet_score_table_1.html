@@ -23,41 +23,35 @@
             </tr>
         </thead>
         <tbody>
-            {% with score_data=score_student_data.헌법 %}
-                {% partial sub_score_line %}
-            {% endwith %}
-            {% with score_data=score_student_data.언어 %}
-                {% partial sub_score_line %}
-            {% endwith %}
-            {% with score_data=score_student_data.자료 %}
-                {% partial sub_score_line %}
-            {% endwith %}
-            {% with score_data=score_student_data.상황 %}
-                {% partial sub_score_line %}
-            {% endwith %}
-            {% with score_data=score_student_data.피셋 %}
-                {% partial sub_score_line %}
-            {% endwith %}
+            {% for _ in '01234' %}
+                {% cycle info_answer_student.heonbeob info_answer_student.eoneo info_answer_student.jaryo info_answer_student.sanghwang info_answer_student.psat_avg as info_answer silent %}
+                {% cycle statistics.score.heonbeob statistics.score.eoneo statistics.score.jaryo statistics.score.sanghwang statistics.score.psat_avg as score silent %}
+                {% cycle statistics.rank_total.heonbeob statistics.rank_total.eoneo statistics.rank_total.jaryo statistics.rank_total.sanghwang statistics.rank_total.psat_avg as rank_total silent %}
+                {% cycle statistics.rank_department.heonbeob statistics.rank_department.eoneo statistics.rank_department.jaryo statistics.rank_department.sanghwang statistics.rank_department.psat_avg as rank_department silent %}
+                {% cycle statistics.participants_total.heonbeob statistics.participants_total.eoneo statistics.participants_total.jaryo statistics.participants_total.sanghwang statistics.participants_total.psat_avg as participants_total silent %}
+                {% cycle statistics.participants_department.heonbeob statistics.participants_department.eoneo statistics.participants_department.jaryo statistics.participants_department.sanghwang statistics.participants_department.psat_avg as participants_department silent %}
+                {% if info_answer %}{% partial sub_score_line %}{% endif %}
+            {% endfor %}
         </tbody>
     </table>
 </article>
 
 {% partialdef sub_score_line %}
-    <tr class="text-center {% if score_data.sub == '피셋' %}table-warning{% endif %}">
+    <tr class="text-center {% if info_answer.sub == '피셋' %}table-warning{% endif %}">
         <th class="text-nowrap" aria-label="과목">
-            {% if score_data.is_confirmed or score_data.sub == '피셋' %}
-                {{ score_data.icon|safe }} {{ score_data.subject }}
+            {% if info_answer.is_confirmed or info_answer.sub == '피셋' %}
+                {{ info_answer.icon|safe }} {{ info_answer.subject }}
             {% else %}
                 <a class="text-decoration-none"
                    href="" hx-boost="true">
-                    {{ score_data.icon|safe }} {{ score_data.subject }}
+                    {{ info_answer.icon|safe }} {{ info_answer.subject }}
                 </a>
             {% endif %}
         </th>
 
-        {% if not score_data.is_confirmed %}
+        {% if not info_answer.is_confirmed %}
             <td colspan="5">
-                {% if score_data.sub == '피셋' %}
+                {% if info_answer.sub == '피셋' %}
                     <span class="badge rounded-pill bg-danger">답안을 제출해주세요.</span>
                 {% else %}
                     <a hx-boost="true"
@@ -68,33 +62,33 @@
             </td>
         {% else %}
             <td>
-                <div id="{{ prefix }}my_score_{{ score_data.sub_eng }}"
+                <div id="{{ prefix }}my_score_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-0">
-                    {{ score_data.score|floatformat:1 }}
+                    {{ score|floatformat:1 }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}rank_total_{{ score_data.sub_eng }}"
+                <div id="{{ prefix }}rank_total_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-1">
-                    {{ score_data.rank_total }}
+                    {{ rank_total }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}rank_ratio_total_{{ score_data.sub_eng }}"
+                <div id="{{ prefix }}rank_ratio_total_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-2">
-                    {{ score_data.rank_ratio_total|percentage|floatformat:1 }}
+                    {{ rank_total|percentageby:participants_total|floatformat:1 }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}rank_department_{{ score_data.sub_eng }}"
+                <div id="{{ prefix }}rank_department_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-3">
-                    {{ score_data.rank_department }}
+                    {{ rank_department }}
                 </div>
             </td>
             <td>
-                <div id="{{ prefix }}rank_ratio_department_{{ score_data.sub_eng }}"
+                <div id="{{ prefix }}rank_ratio_department_{{ info_answer.sub_eng }}"
                      class="htmx-fade-up-in delay-4">
-                    {{ score_data.rank_ratio_department|percentage|floatformat:1 }}
+                    {{ rank_department|percentageby:participants_department|floatformat:1 }}
                 </div>
             </td>
         {% endif %}

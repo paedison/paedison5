@@ -37,6 +37,9 @@ def index_view(request: HtmxHttpRequest):
         data_answer_official=data_answer_official,
     )
 
+    stat_total = ei.get_dict_stat_data(student=student, statistics_type='total')
+    stat_department = ei.get_dict_stat_data(student=student, statistics_type='department')
+
     context = update_context_data(
         # base info
         info=info,
@@ -61,8 +64,9 @@ def index_view(request: HtmxHttpRequest):
         data_answer_student=data_answer_student,
 
         # index_sheet_score: 성적 예측 I [전체 데이터]
-        # score_student=score_student,
-        # all_score_stat=all_score_stat,
+        statistics=student.statistics,
+        stat_total=stat_total,
+        stat_department=stat_department,
 
         # index_sheet_score_filtered: 성적 예측 II [정답 공개 전 데이터]
         # filtered_score_student=filtered_score_student,
