@@ -122,11 +122,12 @@ ICON_FILTER = '<i class="fa-solid fa-filter"></i>'
 
 ICON_SUBJECT = {
     '전체': '<i class="fa-solid fa-fw fa-bars"></i>',
+    '헌법': '<i class="fa-solid fa-fw fa-gavel"></i>',
     '언어': '<i class="fa-solid fa-fw fa-language"></i>',
     '자료': '<i class="fa-solid fa-fw fa-table-cells-large"></i>',
     '상황': '<i class="fa-solid fa-fw fa-scale-balanced"></i>',
-    '헌법': '<i class="fa-solid fa-fw fa-gavel"></i>',
     '피셋': '',
+    '총점': '',
     '평균': '',
 }
 

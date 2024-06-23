@@ -165,6 +165,7 @@ class OfficialAnswer(TimeRemarkChoiceBase):
     exam = models.CharField(max_length=2, choices=ExamChoice)
     round = models.IntegerField(default=0)  # 0 for '행시, 입시, 칠급', round number for '프모'
 
+    answer = models.JSONField(default=dict)
     heonbeob = models.TextField(default='')
     eoneo = models.TextField(default='')
     jaryo = models.TextField(default='')
@@ -190,11 +191,15 @@ class StudentAnswer(TimeRemarkChoiceBase):
     updated_at = models.DateTimeField(auto_now=True)
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='student_answers')
 
+    answer = models.JSONField(default=dict)
     heonbeob = models.TextField(default='')
     eoneo = models.TextField(default='')
     jaryo = models.TextField(default='')
     sanghwang = models.TextField(default='')
 
+    answer_count = models.JSONField(default=dict)
+
+    answer_confirmed = models.JSONField(default=dict)
     heonbeob_confirmed = models.BooleanField(default=False)
     eoneo_confirmed = models.BooleanField(default=False)
     jaryo_confirmed = models.BooleanField(default=False)

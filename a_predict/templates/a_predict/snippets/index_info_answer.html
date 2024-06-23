@@ -40,7 +40,7 @@
             </thead>
             <tbody>
                 {% for _ in '01234' %}
-                    {% cycle info_answer_student.헌법 info_answer_student.언어 info_answer_student.자료 info_answer_student.상황 info_answer_student.평균 as info_answer silent %}
+                    {% cycle info_answer_student.heonbeob info_answer_student.eoneo info_answer_student.jaryo info_answer_student.sanghwang info_answer_student.psat_avg as info_answer silent %}
                     {% if info_answer %}{% partial sub_answer_line %}{% endif %}
                 {% endfor %}
             </tbody>

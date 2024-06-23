@@ -20,26 +20,45 @@ def run():
         '자료': 'jaryo',
         '상황': 'sanghwang',
     }
+    update_list = []
+
     for student in students:
         student_answer, created = StudentAnswer.objects.get_or_create(student=student)
+        if student.exam == '칠급':
+            subject_list.pop('헌법')
 
+        answer = {}
+        answer_count = {}
+        answer_confirmed = {}
         for subject, field in subject_list.items():
-            problem_count = 40
+            subject_problem_count = 40
             if student.exam == '칠급' or subject == '헌법':
-                problem_count = 25
+                subject_problem_count = 25
 
-            submitted_answers = SubmittedAnswer.objects.filter(
-                student=student, subject=subject
-            ).order_by('number').values('number', 'answer')
+            qs_submitted_answers = SubmittedAnswer.objects.filter(
+                student=student, subject=subject).order_by('number')
 
-            answer_count = submitted_answers.count()
-            if answer_count == problem_count:
-                answer_list = [''] * problem_count
-                for ans in submitted_answers:
-                    index = ans['number'] - 1
-                    answer_list[index] = str(ans['answer'])
-                answer_string = ','.join(answer_list)
-            else:
-                answer_string = ''
-            setattr(student_answer, field, answer_string)
-            student_answer.save(message_type=field)
+            subject_answer_count = qs_submitted_answers.count()
+            answer_count[field] = subject_answer_count
+            answer_confirmed[field] = subject_problem_count == subject_answer_count
+
+            answer[field] = []
+            for i in range(1, subject_problem_count + 1):
+                answer[field].append({'no': i, 'ans': 0})
+            for qs in qs_submitted_answers:
+                answer[field][qs.number - 1] = {
+                    'no': qs.number,
+                    'ans': qs.answer,
+                }
+
+        student_answer.heonbeob = ''
+        student_answer.eoneo = ''
+        student_answer.jaryo = ''
+        student_answer.sanghwang = ''
+        student_answer.answer = answer
+        student_answer.answer_count = answer_count
+        student_answer.answer_confirmed = answer_confirmed
+        update_list.append(student_answer)
+
+    StudentAnswer.objects.bulk_update(
+        update_list, ['heonbeob', 'eoneo', 'jaryo', 'sanghwang', 'answer', 'answer_count', 'answer_confirmed'])

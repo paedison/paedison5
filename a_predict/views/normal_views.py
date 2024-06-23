@@ -23,9 +23,8 @@ def index_view(request: HtmxHttpRequest):
         'view_type': 'predict',
     }
 
-    data_answer_correct = ei.get_dict_data_answer_correct()
-    data_answer_rate = ei.get_dict_data_answer_rate(
-        data_answer_correct=data_answer_correct)
+    data_answer_official = ei.get_dict_data_answer_official()
+    data_answer_rate = ei.get_dict_data_answer_rate(data_answer_official=data_answer_official)
 
     data_answer_student, data_answer_count, data_answer_confirmed = (
         ei.get_tuple_data_answer_student(request=request, data_answer_rate=data_answer_rate)
@@ -35,7 +34,7 @@ def index_view(request: HtmxHttpRequest):
         data_answer_student=data_answer_student,
         data_answer_count=data_answer_count,
         data_answer_confirmed=data_answer_confirmed,
-        data_answer_correct=data_answer_correct,
+        data_answer_official=data_answer_official,
     )
 
     context = update_context_data(
@@ -57,7 +56,7 @@ def index_view(request: HtmxHttpRequest):
         info_answer_student=info_answer_student,
 
         # index_sheet_answer: 답안 확인
-        data_answer_correct=data_answer_correct,
+        data_answer_official=data_answer_official,
         # data_answer_predict=data_answer['answer_predict'],
         data_answer_student=data_answer_student,
 
@@ -133,7 +132,8 @@ def answer_input_view(request, sub):
     if not student:
         return redirect('predict:student-create')
 
-    _, is_confirmed = ei.get_tuple_answer_final(request=request, sub=sub)
+    field = ei.SUBJECT_VARS[sub][1]
+    is_confirmed = ei.get_obj_student_answer(request=request).answer_confirmed[field]
     if is_confirmed:
         return redirect('predict:index')
 
