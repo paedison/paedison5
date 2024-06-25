@@ -105,6 +105,22 @@ class Exam(TimeRemarkChoiceBase):
     def __str__(self):
         return self.exam
 
+    @property
+    def is_not_finished(self):
+        return timezone.now() < self.exam_finished_at
+
+    @property
+    def is_collecting_answer(self):
+        return self.exam_finished_at < timezone.now() < self.answer_predict_opened_at
+
+    @property
+    def is_predicted_answer_open(self):
+        return self.exam_finished_at < timezone.now() < self.answer_official_opened_at
+
+    @property
+    def is_official_answer_open(self):
+        return timezone.now() > self.answer_official_opened_at
+
     # @property
     # def answer_file(self):
     #     return os.path.join(data_dir, f"answer_file_{self.category}_{self.year}{self.ex}-{self.round}.csv")
@@ -189,6 +205,7 @@ class SubmittedAnswer(TimeRemarkChoiceBase):
 
 class StudentAnswer(TimeRemarkChoiceBase):
     updated_at = models.DateTimeField(auto_now=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='student_answers')
 
     answer = models.JSONField(default=dict)
@@ -453,6 +470,7 @@ class Statistics(StatisticsBase):
 
 class StatisticsVirtual(StatisticsBase):
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='statistics_virtual')
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'a_predict_statistics_virtual'

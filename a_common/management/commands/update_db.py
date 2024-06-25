@@ -32,6 +32,8 @@ def create_instance_get_messages(file_name: str, model: any) -> dict:
                         list_update.append(instance)
                         count_update += 1
                 except model.DoesNotExist:
+                    for field, value in row.items():
+                        row[field] = None if value == '' else value
                     list_create.append(model(**row))
                     count_create += 1
 

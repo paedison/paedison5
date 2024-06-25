@@ -10,6 +10,7 @@ from .base_info import ExamInfo
 
 def index_view(request: HtmxHttpRequest):
     ei = ExamInfo()
+    exam = ei.qs_exam.first()
 
     if not request.user.is_authenticated:
         return render(request, 'a_predict/index.html', {})
@@ -23,11 +24,19 @@ def index_view(request: HtmxHttpRequest):
         'view_type': 'predict',
     }
 
-    data_answer_official = ei.get_dict_data_answer_official()
-    data_answer_rate = ei.get_dict_data_answer_rate(data_answer_official=data_answer_official)
+    data_answer_official = ei.get_dict_data_answer_official(exam=exam)
+    qs_answer_count = ei.qs_answer_count
+    data_answer_rate = ei.get_dict_data_answer_rate(
+        data_answer_official=data_answer_official,
+        qs_answer_count=qs_answer_count,
+    )
 
     data_answer_student, data_answer_count, data_answer_confirmed = (
         ei.get_tuple_data_answer_student(request=request, data_answer_rate=data_answer_rate)
+    )
+    data_answer_predict = ei.get_dict_data_answer_predict(
+        data_answer_official=data_answer_official,
+        qs_answer_count=qs_answer_count,
     )
 
     info_answer_student = ei.get_dict_info_answer_student(
@@ -35,15 +44,20 @@ def index_view(request: HtmxHttpRequest):
         data_answer_count=data_answer_count,
         data_answer_confirmed=data_answer_confirmed,
         data_answer_official=data_answer_official,
+        data_answer_predict=data_answer_predict,
     )
 
-    stat_total = ei.get_dict_stat_data(student=student, statistics_type='total')
-    stat_department = ei.get_dict_stat_data(student=student, statistics_type='department')
+    stat_total_all = ei.get_dict_stat_data(student=student, statistics_type='total')
+    stat_department_all = ei.get_dict_stat_data(student=student, statistics_type='department')
+    stat_total_filtered = ei.get_dict_stat_data(
+        student=student, statistics_type='total', exam=exam)
+    stat_department_filtered = ei.get_dict_stat_data(
+        student=student, statistics_type='department', exam=exam)
 
     context = update_context_data(
         # base info
         info=info,
-        exam=ei.qs_exam.first(),
+        exam=exam,
         current_time=timezone.now(),
 
         # icons
@@ -60,17 +74,16 @@ def index_view(request: HtmxHttpRequest):
 
         # index_sheet_answer: 답안 확인
         data_answer_official=data_answer_official,
-        # data_answer_predict=data_answer['answer_predict'],
+        data_answer_predict=data_answer_predict,
         data_answer_student=data_answer_student,
 
         # index_sheet_score: 성적 예측 I [전체 데이터]
-        statistics=student.statistics,
-        stat_total=stat_total,
-        stat_department=stat_department,
+        stat_total_all=stat_total_all,
+        stat_department_all=stat_department_all,
 
         # index_sheet_score_filtered: 성적 예측 II [정답 공개 전 데이터]
-        # filtered_score_student=filtered_score_student,
-        # filtered_all_score_stat=filtered_all_score_stat,
+        stat_total_filtered=stat_total_filtered,
+        stat_department_filtered=stat_department_filtered,
     )
     return render(request, 'a_predict/index.html', context)
 

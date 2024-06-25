@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, QuerySet
+from django.db.models import Count, QuerySet, F
 from django.urls import reverse_lazy
 from pandas import DataFrame
 
@@ -40,12 +40,12 @@ class ExamInfo:
         '평균': PSAT_AVG,
     }
     FIELD_VARS = {
-        'heonbeob': '헌법',
-        'eoneo': '언어',
-        'jaryo': '자료',
-        'sanghwang': '상황',
-        'psat_total': '총점',
-        'psat_avg': '평균',
+        'heonbeob': ('헌법', '헌법'),
+        'eoneo': ('언어', '언어논리'),
+        'jaryo': ('자료', '자료해석'),
+        'sanghwang': ('상황', '상황판단'),
+        'psat_total': ('총점', 'PSAT 총점'),
+        'psat_avg': ('평균', 'PSAT 평균'),
     }
 
     # Customize PROBLEM_COUNT, SUBJECT_VARS by Exam
@@ -77,7 +77,8 @@ class ExamInfo:
         student__year=YEAR, student__exam=EXAM, student__round=ROUND)
     qs_submitted_answer = SubmittedAnswer.objects.filter(
         student__year=YEAR, student__exam=EXAM, student__round=ROUND)
-    qs_answer_count = AnswerCount.objects.filter(year=YEAR, exam=EXAM, round=ROUND)
+    qs_answer_count = AnswerCount.objects.filter(
+        year=YEAR, exam=EXAM, round=ROUND).annotate(no=F('number')).order_by('subject', 'number')
     qs_official_answer = OfficialAnswer.objects.filter(year=YEAR, exam=EXAM, round=ROUND)
 
     def create_student(self, student: Student, request: HtmxHttpRequest) -> Student:
@@ -105,7 +106,7 @@ class ExamInfo:
             count=Count('student', distinct=True))
         return {self.SUBJECT_VARS[p['subject']][1]: p['count'] for p in qs_participants_count}
 
-    def get_dict_data_answer_official(self) -> dict:
+    def get_dict_data_answer_official(self, exam: Exam) -> dict:
         # {
         #     '헌법': [
         #         {
@@ -117,47 +118,45 @@ class ExamInfo:
         #         ...
         #     ]
         # }
-        qs_official_answer = self.qs_official_answer.first()
-        if qs_official_answer and qs_official_answer.answer:
-            return qs_official_answer.answer
+        if exam.is_official_answer_open:
+            qs_official_answer = self.qs_official_answer.first()
+            if qs_official_answer and qs_official_answer.answer:
+                return qs_official_answer.answer
 
-        with open(self.ANSWER_FILE, 'r', encoding='utf-8') as f:
-            df: DataFrame = pd.read_csv(f, header=0, index_col=0)  # index: 1부터 시작하는 문제 번호
+            with open(self.ANSWER_FILE, 'r', encoding='utf-8') as f:
+                df: DataFrame = pd.read_csv(f, header=0, index_col=0)  # index: 1부터 시작하는 문제 번호
 
-            subjects = ['헌법', '언어', '자료', '상황']
-            if '헌법' not in df.columns:
-                subjects.remove('헌법')
+                subjects = ['헌법', '언어', '자료', '상황']
+                if '헌법' not in df.columns:
+                    subjects.remove('헌법')
 
-            data_answer_official = {}
-            for subject in subjects:
-                df_subject = df[[subject]].dropna()
-                field = self.SUBJECT_VARS[subject][1]
+                data_answer_official = {}
+                for subject in subjects:
+                    df_subject = df[[subject]].dropna()
+                    field = self.SUBJECT_VARS[subject][1]
 
-                data_answer_official[field] = []
-                for index, row in df_subject.iterrows():
-                    ans_number = int(row[subject])
-                    ans_number_list = [int(ans) for ans in str(ans_number) if ans_number > 5]
-                    append_dict = {'number': int(index), 'ans_number': ans_number}
-                    if ans_number_list:
-                        append_dict['ans_number_list'] = ans_number_list
-                    data_answer_official[field].append(append_dict)
-            return data_answer_official
+                    data_answer_official[field] = []
+                    for index, row in df_subject.iterrows():
+                        ans_number = int(row[subject])
+                        ans_number_list = [int(ans) for ans in str(ans_number) if ans_number > 5]
+                        append_dict = {'number': int(index), 'ans_number': ans_number}
+                        if ans_number_list:
+                            append_dict['ans_number_list'] = ans_number_list
+                        data_answer_official[field].append(append_dict)
+                return data_answer_official
 
-    def get_dict_data_answer_rate(self, data_answer_official: dict) -> dict:
-        qs_answer_count: QuerySet[AnswerCount] = self.qs_answer_count.order_by('subject', 'number')
-        dict_answer_count = {}
-        for field in self.PROBLEM_COUNT.keys():
-            dict_answer_count[field] = []
+    def get_dict_data_answer_rate(self, data_answer_official: dict, qs_answer_count: AnswerCount) -> dict:
+        dict_answer_count = {field: [] for field in self.PROBLEM_COUNT.keys()}
 
         qs: AnswerCount
         for qs in qs_answer_count:
             field = self.SUBJECT_VARS[qs.subject][1]
-            answer_official = data_answer_official[field][qs.number - 1]
-            ans_official = answer_official['ans']
-            qs.rate_correct = getattr(qs, f'rate_{ans_official}')
-            answer_official['rate_correct'] = getattr(qs, f'rate_{ans_official}')
-
             dict_answer_count[field].append(qs)
+            if data_answer_official:
+                answer_official = data_answer_official[field][qs.number - 1]
+                ans_official = answer_official['ans']
+                qs.rate_correct = getattr(qs, f'rate_{ans_official}')
+                answer_official['rate_correct'] = getattr(qs, f'rate_{ans_official}')
 
         return dict_answer_count
 
@@ -165,7 +164,7 @@ class ExamInfo:
     def get_list_answer_empty(problem_count: int) -> list:
         answer_empty = []
         for i in range(1, problem_count + 1):
-            answer_empty.append({'number': i, 'ans_number': ''})
+            answer_empty.append({'no': i, 'ans': ''})
         return answer_empty
 
     def get_list_answer_temp(
@@ -186,7 +185,7 @@ class ExamInfo:
 
     def get_tuple_data_answer_student(
             self, request: HtmxHttpRequest,
-            data_answer_rate: dict,
+            data_answer_rate: dict | None,
     ) -> tuple[dict[str, list], dict[str, int], dict[str, bool]]:
         qs_answer_final: StudentAnswer = self.get_obj_student_answer(request=request)
         qs_answer_temp: QuerySet[SubmittedAnswer] = self.qs_submitted_answer.filter(student__user=request.user)
@@ -237,39 +236,52 @@ class ExamInfo:
                 return reverse_lazy('predict:answer-input', args=[sub])
         return reverse_lazy('predict_test:index')
 
-    def get_answer_predict(self, data_answer_correct):
-        data_answer_predict = {}
-        qs_submitted_answers = ''
+    def get_dict_data_answer_predict(self, data_answer_official: dict, qs_answer_count: AnswerCount) -> dict:
+        data_answer_predict = {subject: [] for subject in self.PROBLEM_COUNT.keys()}
+        qs: AnswerCount
+        for qs in qs_answer_count:
+            field = self.SUBJECT_VARS[qs.subject][1]
+            count_list = [c for c in [qs.count_1, qs.count_2, qs.count_3, qs.count_4, qs.count_5]]
+            qs.ans_predict = count_list.index(max(count_list)) + 1
+            qs.rate_accuracy = getattr(qs, f'rate_{qs.ans_predict}')
+            data_answer_predict[field].append(qs)
+        return data_answer_predict
 
-        for sub, problem_count in self.PROBLEM_COUNT.items():
-            answers_predict = self.get_list_answer_empty(problem_count=problem_count)
-            for i in range(1, problem_count + 1):
-                ans_number_correct = data_answer_correct[sub][i - 1]['ans_number']
-                answer_count_list = []  # list for counting answers
-                for i in range(5):
-                    answer_count_list.append(problem[f'count_{i + 1}'])
-                ans_number_predict = answer_count_list.index(max(answer_count_list)) + 1  # 예상 정답
-                rate_accuracy = problem[f'rate_{ans_number_predict}']  # 정확도
-
-                result = 'O'
-                if ans_number_correct and ans_number_correct != ans_number_predict:
-                    result = 'X'
-                data_answer_predict[sub].append(
-                    {
-                        'number': number,
-                        'ans_number': ans_number_predict,
-                        'result': result,
-                        'rate_accuracy': rate_accuracy,
-                    }
-                )
+    #
+    # def get_dict_data_answer_predict(self, data_answer_official: dict, qs_answer_count: AnswerCount) -> dict:
+    #     data_answer_predict = {}
+    #     for qs in qs_answer_count:
+    #         field = self.SUBJECT_VARS[qs.subject][1]
+    #         problem_count = self.PROBLEM_COUNT[qs.subject]
+    #         data_answer_predict[qs.subject] = self.get_list_answer_empty(problem_count=problem_count)
+    #         for idx in range(problem_count):
+    #             ans_official = data_answer_official[field][idx]['ans'] if data_answer_official else None
+    #
+    #             answer_count_list = []  # list for counting answers
+    #             for i in range(1, 6):
+    #                 answer_count_list.append(problem[f'count_{i}'])
+    #             ans_predict = answer_count_list.index(max(answer_count_list)) + 1  # 예상 정답
+    #             rate_accuracy = problem[f'rate_{ans_predict}']  # 정확도
+    #
+    #             result = 'O'
+    #             if ans_official and ans_official != ans_predict:
+    #                 result = 'X'
+    #             data_answer_predict[sub].append(
+    #                 {
+    #                     'no': number,
+    #                     'ans': ans_predict,
+    #                     'result': result,
+    #                     'rate_accuracy': rate_accuracy,
+    #                 }
+    #             )
 
     def get_dict_info_answer_student_empty(self, field):
-        sub = self.FIELD_VARS[field]
+        sub = self.FIELD_VARS[field][0]
         return {
             'icon': icon_set.ICON_SUBJECT[sub],
             'sub': sub,
             'subject': self.SUBJECT_VARS[sub][0],
-            'sub_eng': self.SUBJECT_VARS[sub][1],
+            'field': self.SUBJECT_VARS[sub][1],
         }
 
     def get_dict_info_answer_student(
@@ -278,11 +290,14 @@ class ExamInfo:
             data_answer_count: dict,
             data_answer_confirmed: dict,
             data_answer_official: dict,
+            data_answer_predict: dict,
     ) -> dict:
         participants_count = self.get_dict_participants_count()
         info_answer_student = {}
         if data_answer_student:
-            total_score_real = 0
+            psat_score_real = psat_score_predict = 0
+            psat_fields = ['eoneo', 'jaryo', 'sanghwang']
+
             for field, value in data_answer_student.items():
                 problem_count = self.PROBLEM_COUNT[field]
                 answer_count = data_answer_count[field]
@@ -293,34 +308,44 @@ class ExamInfo:
                 except KeyError:
                     participants = 0
 
-                correct_count = 0
+                correct_real_count = correct_predict_count = 0
                 for idx, answer_student in enumerate(value):
                     ans_student = answer_student['ans']
-                    ans_official = data_answer_official[field][idx]['ans']
+                    ans_official = data_answer_official[field][idx]['ans'] if data_answer_official else None
+                    ans_predict = data_answer_predict[field][idx].ans_predict
 
                     try:
                         ans_official_list = data_answer_official[field][idx]['ans_list']
-                    except KeyError:
+                    except (KeyError, TypeError):
                         ans_official_list = None
 
-                    result = 'X'
+                    result_real = 'X'
                     if ans_official_list and ans_student in ans_official_list:
-                        result = 'O'
+                        result_real = 'O'
                     if ans_student == ans_official:
-                        result = 'O'
-                    answer_student['result'] = result
-                    correct_count += 1 if result == 'O' else 0
+                        result_real = 'O'
+                    answer_student['result_real'] = result_real
+                    correct_real_count += 1 if result_real == 'O' else 0
 
-                score_real = correct_count * 100 / problem_count
-                total_score_real += score_real
+                    result_predict = 'X'
+                    if ans_student == ans_predict:
+                        result_predict = 'O'
+                    answer_student['result_predict'] = result_predict
+                    correct_predict_count += 1 if result_predict == 'O' else 0
+
+                score_real = correct_real_count * 100 / problem_count
+                psat_score_real += score_real if field in psat_fields else 0
+
+                score_predict = correct_predict_count * 100 / problem_count
+                psat_score_predict += score_predict if field in psat_fields else 0
 
                 info_answer_student[field] = self.get_dict_info_answer_student_empty(field)
                 info_answer_student[field].update({
                     'problem_count': problem_count,
                     'participants': participants,
                     'answer_count': answer_count,
-                    # 'score_virtual': score_virtual[sub],
-                    'score_real': correct_count * 100 / problem_count,
+                    'score_real': correct_real_count * 100 / problem_count,
+                    'score_predict': score_predict,
                     'is_confirmed': is_confirmed,
                 })
 
@@ -329,13 +354,18 @@ class ExamInfo:
                 'participants': participants_count[max(participants_count)],
                 'problem_count': sum([val for val in self.PROBLEM_COUNT.values()]),
                 'answer_count': sum([val for val in data_answer_count.values()]),
-                # 'score_virtual': score_virtual[sub],
-                'score_real': total_score_real / len(self.PROBLEM_COUNT),
+                'score_real': psat_score_real / 3,
+                'score_predict': psat_score_predict / 3,
                 'is_confirmed': all(data_answer_confirmed),
             })
         return info_answer_student
 
-    def get_dict_stat_data(self, student: Student, statistics_type: str):
+    def get_dict_stat_data(
+            self,
+            student: Student,
+            statistics_type: str,
+            exam: Exam | None = None,
+    ):
         filter_exp = {
             'student__year': student.year,
             'student__exam': student.exam,
@@ -343,6 +373,8 @@ class ExamInfo:
         }
         if statistics_type == 'department':
             filter_exp['student__department'] = student.department
+        if exam:
+            filter_exp['student__student_answers__confirmed_at__lte'] = exam.answer_official_opened_at
         queryset = Statistics.objects.filter(**filter_exp).values('score')
 
         score = {}
@@ -350,22 +382,36 @@ class ExamInfo:
         fields = list(self.PROBLEM_COUNT.keys())
         fields.append('psat_avg')
         for field in fields:
+            sub, subject = self.FIELD_VARS[field]
+            if field == 'psat_avg':
+                is_confirmed = all(student.student_answers.answer_confirmed.values())
+            else:
+                is_confirmed = student.student_answers.answer_confirmed[field]
+
             score[field] = []
             for qs in queryset:
                 if field in qs['score'].keys():
                     score[field].append(qs['score'][field])
 
-            num_scores = len(score[field])
+            participants = len(score[field])
             sorted_scores = sorted(score[field], reverse=True)
-            top_10_threshold = max(1, int(num_scores * 0.1))
-            top_20_threshold = max(1, int(num_scores * 0.2))
+
+            rank = sorted_scores.index(student.statistics.score[field]) + 1
+            top_10_threshold = max(1, int(participants * 0.1))
+            top_20_threshold = max(1, int(participants * 0.2))
 
             stat_data[field] = {
+                'field': field,
+                'sub': sub,
+                'subject': subject,
+                'icon': icon_set.ICON_SUBJECT[sub],
+                'is_confirmed': is_confirmed,
+                'rank': rank,
                 'score': student.statistics.score[field],
-                'participants': num_scores,
+                'participants': participants,
                 'max_score': sorted_scores[0],
                 'top_score_10': sorted_scores[top_10_threshold - 1],
                 'top_score_20': sorted_scores[top_20_threshold - 1],
-                'avg_score': sum(score[field]) / num_scores,
+                'avg_score': sum(score[field]) / participants,
             }
         return stat_data

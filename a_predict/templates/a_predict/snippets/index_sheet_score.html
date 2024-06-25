@@ -17,27 +17,27 @@
 <div class="card-body">
     <nav>
         <div class="nav nav-tabs nav-tabs-colored" id="scoreSheetTab" role="tablist">
-            {% #nav_tab prefix='my' id='0' class='' %}내 성적{% /nav_tab %}
-            {% #nav_tab prefix='total' id='1' class='' %}전체 기준{% /nav_tab %}
-            {% #nav_tab prefix='department' id='2' class='' %}직렬 기준{% /nav_tab %}
+            {% #nav_tab prefix='my_all' id='0' class='' %}내 성적{% /nav_tab %}
+            {% #nav_tab prefix='total_all' id='1' class='' %}전체 기준{% /nav_tab %}
+            {% #nav_tab prefix='department_all' id='2' class='' %}직렬 기준{% /nav_tab %}
         </div>
     </nav>
 
     <div class="tab-content" id="scoreSheetContent">
-        {% #nav_content prefix='my' id='0' %}
-            {% with score_student_data=score_student %}
+        {% #nav_content prefix='my_all' id='0' %}
+            {% with stat_total=stat_total_all stat_department=stat_department_all %}
                 {% include 'a_predict/snippets/index_sheet_score_table_1.html' %}
             {% endwith %}
         {% /nav_content %}
 
-        {% #nav_content prefix='total' id='1' %}
-            {% with prefix='total' stat_data=stat_total %}
+        {% #nav_content prefix='total_all' id='1' %}
+            {% with prefix='total' stat_data=stat_total_all %}
                 {% include 'a_predict/snippets/index_sheet_score_table_2.html' %}
             {% endwith %}
         {% /nav_content %}
 
-        {% #nav_content prefix='department' id='2' %}
-            {% with prefix='department' stat_data=stat_department %}
+        {% #nav_content prefix='department_all' id='2' %}
+            {% with prefix='department' stat_data=stat_department_all %}
                 {% include 'a_predict/snippets/index_sheet_score_table_2.html' %}
             {% endwith %}
         {% /nav_content %}
@@ -48,7 +48,7 @@
                 <li>답안 제출을 완료한 응시생들의 <span class="text-danger">전체 답안</span>을
                     대상으로 분석한 자료입니다.</li>
                 <li>최종 성적은 위 결과와 다를 수 있으니 참고 자료로만 활용하시기 바랍니다.</li>
-                {% if not filtered_score_student %}
+                {% if not filtered_stat_total %}
                     <li>정답 공개 전 제출 답안을 대상으로 분석한 자료는
                         <span class="text-danger">해당 응시자에게만 공개</span>됩니다.</li>
                 {% endif %}

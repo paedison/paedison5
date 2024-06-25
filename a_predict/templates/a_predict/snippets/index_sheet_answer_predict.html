@@ -3,7 +3,7 @@
 <div class="card-header">
     예상 정답
     <a class="text-decoration-none ms-2" href="" hx-swap="none" hx-indicator="#answer_predict_spinner"
-       hx-get="{% url 'predict_test:update_sheet_answer_predict' %}">
+       hx-get="">
         <span class="badge rounded-pill text-bg-warning">업데이트</span>
     </a>
     <div id="answer_predict_spinner" role="status"
@@ -17,28 +17,31 @@
         <div class="nav nav-tabs nav-tabs-colored" id="scoreAnswersTab" role="tablist">
             {% for id in '0123' %}
                 {% cycle '헌법' '언어' '자료' '상황' as sub silent %}
+                {% cycle 'heonbeob_predict' 'eoneo_predict' 'jaryo_predict' 'sanghwang_predict' as prefix silent %}
                 {% cycle icon_subject.헌법|safe icon_subject.언어|safe icon_subject.자료|safe icon_subject.상황|safe as icon silent %}
-                {% #nav_tab prefix=sub id=id %}{{ icon }} {{ sub }}{% /nav_tab %}
+                {% #nav_tab prefix=prefix id=id %}{{ icon }} {{ sub }}{% /nav_tab %}
             {% endfor %}
         </div>
     </nav>
 
     <div class="tab-content" id="scoreAnswersContent">
         {% for id in '0123' %}
-            {% cycle '헌법' '언어' '자료' '상황' as sub silent %}
-            {% cycle data_answer_correct.헌법 data_answer_correct.언어 data_answer_correct.자료 data_answer_correct.상황 as answer_correct silent %}
-            {% cycle data_answer_predict.헌법 data_answer_predict.언어 data_answer_predict.자료 data_answer_predict.상황 as answer_predict silent %}
-            {% cycle data_answer_student.헌법 data_answer_student.언어 data_answer_student.자료 data_answer_student.상황 as answer_student silent %}
-            {% cycle info_answer_student.헌법 info_answer_student.언어 info_answer_student.자료 info_answer_student.상황 as info_answer silent %}
-            {% #nav_content prefix=sub id=id %}{% partial answer_table %}{% /nav_content %}
+            {% cycle 'heonbeob_predict' 'eoneo_predict' 'jaryo_predict' 'sanghwang_predict' as prefix silent %}
+            {% cycle data_answer_official.heonbeob data_answer_official.eoneo data_answer_official.jaryo data_answer_official.sanghwang as answer_official silent %}
+            {% cycle data_answer_student.heonbeob data_answer_student.eoneo data_answer_student.jaryo data_answer_student.sanghwang as answer_student silent %}
+            {% cycle data_answer_predict.heonbeob data_answer_predict.eoneo data_answer_predict.jaryo data_answer_predict.sanghwang as answer_predict silent %}
+            {% cycle info_answer_student.heonbeob info_answer_student.eoneo info_answer_student.jaryo info_answer_student.sanghwang as info_answer silent %}
+            {% #nav_content prefix=prefix id=id %}
+                {% with field=prefix %}{% partial answer_table %}{% endwith %}
+            {% /nav_content %}
         {% endfor %}
     </div>
     <div>
         <span class="badge bg-success"><i class="fa-regular fa-circle-check"></i> 참고</span><br/>
         <ol class="text-success small fw-bold m-0">
-            {% if current_time < exam.answer_predict_open_datetime %}
-                <li>예상 정답은 답안 수집 후 {{ exam.answer_predict_open_datetime|date:'G시 i분' }}부터
-                    {{ exam.answer_open_datetime|date:'G시 i분' }}까지만 공개됩니다.</li>
+            {% if exam.is_predicted_answer_open %}
+                <li>예상 정답은 답안 수집 후 {{ exam.answer_predict_opened_at|date:'G시 i분' }}부터
+                    {{ exam.answer_official_opened_at|date:'G시 i분' }}까지만 공개됩니다.</li>
             {% else %}
                 <li>{{ current_time|date:'Y년 n월 j일 G:i' }} 기준 예상 정답입니다.</li>
             {% endif %}
@@ -52,7 +55,7 @@
     <article class="table-responsive">
         <table class="table small align-middle">
             <tbody>
-                {% if current_time < exam.answer_predict_open_datetime %}
+                {% if not exam.is_predicted_answer_open %}
                     <tr class="text-center">
                         {% if info_answer.is_confirmed %}
                             <th class="fw-bold text-bg-warning">
@@ -61,14 +64,14 @@
                         {% else %}
                             <th>
                                 <a class="btn btn-outline-danger my-4"
-                                   href="{% url 'predict_test:answer_input' info_answer.sub %}" hx-boost="true">
+                                   href="" hx-boost="true">
                                     답안을 제출해주세요.
                                 </a>
                             </th>
                         {% endif %}
                     </tr>
                 {% else %}
-                    {% if ex == '칠급' or answer_student|length == 25  %}
+                    {% if answer_student|length == 25  %}
                         {% for _ in '012' %}
                             {% cycle 10 10 5 as loop_counter silent %}
                             {% cycle 0 10 20 as loop_min silent %}
@@ -99,20 +102,20 @@
         {% for answer in answer_predict %}
             {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                 <td class="td-no-border">
-                    {% if answer.result == 'O' %}
-                        <button data-number="{{ answer.number }}"
-                                class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-success">
-                            <div id="{{ sub }}ans_{{ answer.number }}"
+                    {% if exam.is_official_answer_open and answer.result_real != 'O' %}
+                        <button data-number="{{ answer.no }}"
+                                class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-danger">
+                            <div id="{{ field }}_ans_{{ answer.no }}"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
-                                {{ answer.ans_number }}
+                                {{ answer.ans_predict }}
                             </div>
                         </button>
                     {% else %}
-                        <button data-number="{{ answer.number }}"
-                                class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-danger">
-                            <div id="{{ sub }}ans_{{ answer.number }}"
+                        <button data-number="{{ answer.no }}"
+                                class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-success">
+                            <div id="{{ field }}_ans_{{ answer.no }}"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
-                                {{ answer.ans_number }}
+                                {{ answer.ans_predict }}
                             </div>
                         </button>
                     {% endif %}
@@ -125,16 +128,16 @@
         {% for answer in answer_predict %}
             {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                 <td>
-                    {% if answer.result == 'O' %}
-                        <div data-number="{{ answer.number }}" class="fw-bold text-success">
-                            <div id="{{ sub }}accracy_{{ answer.number }}" aria-label="정확도"
+                    {% if exam.is_official_answer_open and answer.result_real != 'O' %}
+                        <div data-number="{{ answer.no }}" class="fw-bold text-danger">
+                            <div id="{{ field }}_accracy_{{ answer.no }}" aria-label="정확도"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
                                 {{ answer.rate_accuracy|floatformat:0 }}
                             </div>
                         </div>
                     {% else %}
-                        <div data-number="{{ answer.number }}" class="fw-bold text-danger">
-                            <div id="{{ sub }}accracy_{{ answer.number }}" aria-label="정확도"
+                        <div data-number="{{ answer.no }}" class="fw-bold text-success">
+                            <div id="{{ field }}_accracy_{{ answer.no }}" aria-label="정확도"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
                                 {{ answer.rate_accuracy|floatformat:0 }}
                             </div>

@@ -50,13 +50,13 @@
                     {% include 'a_predict/snippets/index_info_answer.html' %}
                 </div>
             </div>
-            {% if current_time > exam.answer_official_opened_at %}
+            {% if exam.is_official_answer_open %}
                 <div class="col-12" aria-label="성적 예측 I [전체 데이터]">
                     <div id="sheet_score" class="card htmx-fade-in htmx-fade-out">
                         {% include 'a_predict/snippets/index_sheet_score.html' %}
                     </div>
                 </div>
-                {% if filtered_score_student %}
+                {% if stat_total_filtered %}
                     <div class="col-12" aria-label="성적 예측 II [정답 공개 전 데이터]">
                         <div id="sheet_score" class="card htmx-fade-in htmx-fade-out">
                             {% include 'a_predict/snippets/index_sheet_score_filtered.html' %}
@@ -64,7 +64,7 @@
                     </div>
                 {% endif %}
             {% endif %}
-            {% if current_time > exam.exam_finished_at and current_time < exam.answer_official_opened_at %}
+            {% if exam.is_predicted_answer_open %}
                 <div class="col-12" aria-label="예상 정답">
                     <div id="info_student" class="card htmx-fade-in htmx-fade-out">
                         {% include 'a_predict/snippets/index_sheet_answer_predict.html' %}
