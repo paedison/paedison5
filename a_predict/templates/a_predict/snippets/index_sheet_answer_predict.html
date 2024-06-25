@@ -31,18 +31,17 @@
             {% cycle data_answer_student.heonbeob data_answer_student.eoneo data_answer_student.jaryo data_answer_student.sanghwang as answer_student silent %}
             {% cycle data_answer_predict.heonbeob data_answer_predict.eoneo data_answer_predict.jaryo data_answer_predict.sanghwang as answer_predict silent %}
             {% cycle info_answer_student.heonbeob info_answer_student.eoneo info_answer_student.jaryo info_answer_student.sanghwang as info_answer silent %}
-            {% #nav_content prefix=prefix id=id %}
-                {% with field=prefix %}{% partial answer_table %}{% endwith %}
-            {% /nav_content %}
+            {% #nav_content prefix=prefix id=id %}{% partial answer_table %}{% /nav_content %}
         {% endfor %}
     </div>
     <div>
         <span class="badge bg-success"><i class="fa-regular fa-circle-check"></i> 참고</span><br/>
         <ol class="text-success small fw-bold m-0">
-            {% if exam.is_predicted_answer_open %}
+            {% if exam.is_collecting_answer %}
                 <li>예상 정답은 답안 수집 후 {{ exam.answer_predict_opened_at|date:'G시 i분' }}부터
                     {{ exam.answer_official_opened_at|date:'G시 i분' }}까지만 공개됩니다.</li>
-            {% else %}
+            {% endif %}
+            {% if exam.is_answer_predict_opened %}
                 <li>{{ current_time|date:'Y년 n월 j일 G:i' }} 기준 예상 정답입니다.</li>
             {% endif %}
             <li>전체 참여자 중 가장 많은 분들이 선택한 답안을 예상 정답으로 선정합니다.</li>
@@ -55,34 +54,37 @@
     <article class="table-responsive">
         <table class="table small align-middle">
             <tbody>
-                {% if not exam.is_predicted_answer_open %}
+                {% if not info_answer.is_confirmed %}
                     <tr class="text-center">
-                        {% if info_answer.is_confirmed %}
+                        <th>
+                            <a class="btn btn-outline-danger my-4"
+                               href="" hx-boost="true">
+                                답안을 제출해주세요.
+                            </a>
+                        </th>
+                    </tr>
+                {% else %}
+                    {% if exam.is_collecting_answer %}
+                        <tr class="text-center">
                             <th class="fw-bold text-bg-warning">
                                 <div class="fs-5 my-4">답안 수집중입니다.</div>
                             </th>
+                        </tr>
+                    {% endif %}
+                    {% if exam.is_answer_predict_opened %}
+                        {% if answer_student|length == 25  %}
+                            {% for _ in '012' %}
+                                {% cycle 10 10 5 as loop_counter silent %}
+                                {% cycle 0 10 20 as loop_min silent %}
+                                {% partial answer_table_tr %}
+                            {% endfor %}
                         {% else %}
-                            <th>
-                                <a class="btn btn-outline-danger my-4"
-                                   href="" hx-boost="true">
-                                    답안을 제출해주세요.
-                                </a>
-                            </th>
+                            {% for _ in '0123' %}
+                                {% cycle 10 10 10 10 as loop_counter silent %}
+                                {% cycle 0 10 20 30 as loop_min silent %}
+                                {% partial answer_table_tr %}
+                            {% endfor %}
                         {% endif %}
-                    </tr>
-                {% else %}
-                    {% if answer_student|length == 25  %}
-                        {% for _ in '012' %}
-                            {% cycle 10 10 5 as loop_counter silent %}
-                            {% cycle 0 10 20 as loop_min silent %}
-                            {% partial answer_table_tr %}
-                        {% endfor %}
-                    {% else %}
-                        {% for _ in '0123' %}
-                            {% cycle 10 10 10 10 as loop_counter silent %}
-                            {% cycle 0 10 20 30 as loop_min silent %}
-                            {% partial answer_table_tr %}
-                        {% endfor %}
                     {% endif %}
                 {% endif %}
             </tbody>
@@ -102,23 +104,13 @@
         {% for answer in answer_predict %}
             {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                 <td class="td-no-border">
-                    {% if exam.is_official_answer_open and answer.result_real != 'O' %}
-                        <button data-number="{{ answer.no }}"
-                                class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-danger">
-                            <div id="{{ field }}_ans_{{ answer.no }}"
-                                 class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
-                                {{ answer.ans_predict }}
-                            </div>
-                        </button>
-                    {% else %}
-                        <button data-number="{{ answer.no }}"
-                                class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-success">
-                            <div id="{{ field }}_ans_{{ answer.no }}"
-                                 class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
-                                {{ answer.ans_predict }}
-                            </div>
-                        </button>
-                    {% endif %}
+                    <button data-number="{{ answer.no }}"
+                            class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-success">
+                        <div id="{{ prefix }}_{{ answer.no }}"
+                             class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
+                            {{ answer.ans_predict }}
+                        </div>
+                    </button>
                 </td>
             {% endif %}
         {% endfor %}
@@ -128,21 +120,12 @@
         {% for answer in answer_predict %}
             {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                 <td>
-                    {% if exam.is_official_answer_open and answer.result_real != 'O' %}
-                        <div data-number="{{ answer.no }}" class="fw-bold text-danger">
-                            <div id="{{ field }}_accracy_{{ answer.no }}" aria-label="정확도"
-                                 class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
-                                {{ answer.rate_accuracy|floatformat:0 }}
-                            </div>
+                    <div data-number="{{ answer.no }}" class="fw-bold text-success">
+                        <div id="{{ prefix }}_accuracy_{{ answer.no }}" aria-label="정확도"
+                             class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
+                            {{ answer.rate_accuracy|floatformat:0 }}
                         </div>
-                    {% else %}
-                        <div data-number="{{ answer.no }}" class="fw-bold text-success">
-                            <div id="{{ field }}_accracy_{{ answer.no }}" aria-label="정확도"
-                                 class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
-                                {{ answer.rate_accuracy|floatformat:0 }}
-                            </div>
-                        </div>
-                    {% endif %}
+                    </div>
                 </td>
             {% endif %}
         {% endfor %}

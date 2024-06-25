@@ -106,20 +106,24 @@ class Exam(TimeRemarkChoiceBase):
         return self.exam
 
     @property
+    def is_not_page_open(self):
+        return timezone.now() <= self.page_opened_at
+
+    @property
     def is_not_finished(self):
-        return timezone.now() < self.exam_finished_at
+        return self.page_opened_at < timezone.now() <= self.exam_finished_at
 
     @property
     def is_collecting_answer(self):
-        return self.exam_finished_at < timezone.now() < self.answer_predict_opened_at
+        return self.exam_finished_at < timezone.now() <= self.answer_predict_opened_at
 
     @property
-    def is_predicted_answer_open(self):
-        return self.exam_finished_at < timezone.now() < self.answer_official_opened_at
+    def is_answer_predict_opened(self):
+        return self.answer_predict_opened_at < timezone.now() <= self.answer_official_opened_at
 
     @property
-    def is_official_answer_open(self):
-        return timezone.now() > self.answer_official_opened_at
+    def is_answer_official_opened(self):
+        return self.answer_official_opened_at <= timezone.now()
 
     # @property
     # def answer_file(self):

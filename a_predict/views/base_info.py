@@ -118,7 +118,7 @@ class ExamInfo:
         #         ...
         #     ]
         # }
-        if exam.is_official_answer_open:
+        if exam.is_answer_official_opened:
             qs_official_answer = self.qs_official_answer.first()
             if qs_official_answer and qs_official_answer.answer:
                 return qs_official_answer.answer

@@ -40,7 +40,7 @@
     <div class="card-header">수험정보</div>
 
     <div class="card-body">
-        {% if current_time < exam.page_opened_at %}
+        {% if exam.is_not_page_open %}
             <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
                 <i class="fa-solid fa-circle-exclamation"></i>
                     수험정보는 {{ exam.page_opened_at|date:'n/d(D) H:i' }}부터 입력 가능합니다.

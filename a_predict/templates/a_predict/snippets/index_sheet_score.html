@@ -17,30 +17,23 @@
 <div class="card-body">
     <nav>
         <div class="nav nav-tabs nav-tabs-colored" id="scoreSheetTab" role="tablist">
-            {% #nav_tab prefix='my_all' id='0' class='' %}내 성적{% /nav_tab %}
-            {% #nav_tab prefix='total_all' id='1' class='' %}전체 기준{% /nav_tab %}
-            {% #nav_tab prefix='department_all' id='2' class='' %}직렬 기준{% /nav_tab %}
+            {% for id in '012' %}
+                {% cycle 'my_all' 'total_all' 'department_all' as prefix silent %}
+                {% cycle '내 성적' '전체 기준' '직렬 기준' as tab_title silent %}
+                {% #nav_tab prefix=prefix id=id %}{{ tab_title }}{% /nav_tab %}
+            {% endfor %}
         </div>
     </nav>
 
     <div class="tab-content" id="scoreSheetContent">
-        {% #nav_content prefix='my_all' id='0' %}
-            {% with stat_total=stat_total_all stat_department=stat_department_all %}
-                {% include 'a_predict/snippets/index_sheet_score_table_1.html' %}
-            {% endwith %}
-        {% /nav_content %}
-
-        {% #nav_content prefix='total_all' id='1' %}
-            {% with prefix='total' stat_data=stat_total_all %}
-                {% include 'a_predict/snippets/index_sheet_score_table_2.html' %}
-            {% endwith %}
-        {% /nav_content %}
-
-        {% #nav_content prefix='department_all' id='2' %}
-            {% with prefix='department' stat_data=stat_department_all %}
-                {% include 'a_predict/snippets/index_sheet_score_table_2.html' %}
-            {% endwith %}
-        {% /nav_content %}
+        {% for id in '012' %}
+            {% cycle 'my_all' 'total_all' 'department_all' as prefix silent %}
+            {% cycle stat_total_all as stat_total silent %}
+            {% cycle stat_department_all as stat_department silent %}
+            {% cycle '' stat_total_all stat_department_all as stat_data silent %}
+            {% cycle 'a_predict/snippets/index_sheet_score_table_1.html' 'a_predict/snippets/index_sheet_score_table_2.html' 'a_predict/snippets/index_sheet_score_table_2.html' as template_name silent %}
+            {% #nav_content prefix=prefix id=id %}{% include template_name %}{% /nav_content %}
+        {% endfor %}
 
         <div>
             <span class="badge bg-success"><i class="fa-regular fa-circle-check"></i> 참고</span>
