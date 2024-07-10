@@ -1,0 +1,215 @@
+{% extends 'a_score/_base.html' %}
+{% load static %}
+{% load i18n %}
+{% load slippers %}
+
+{% block main %}
+{{ info|json_script:'info' }}
+<section class="section htmx-fade-in htmx-fade-out"
+         hx-target="#main" hx-swap="innerHTML swap:0.25s" hx-push-url="true">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">시험 목록</div>
+
+                <div class="card-body">
+                    {% #responsive_table %}
+                        <thead>
+                            <tr class="text-center table-warning">
+                                <th class="text-primary text-nowrap p-2 col-1">회차</th>
+                                <th class="text-primary text-nowrap p-2 col-1">수험번호</th>
+                                <th class="text-primary text-nowrap p-2 col-1">직렬</th>
+                                <th class="text-primary text-nowrap p-2 col-1">성적표</th>
+                                <th class="text-primary text-nowrap p-2 col-1 d-none d-md-table-cell">
+                                    {{ icon_subject.언어|safe }} 언어
+                                </th>
+                                <th class="text-primary text-nowrap p-2 col-1 d-none d-md-table-cell">
+                                    {{ icon_subject.자료|safe }} 자료
+                                </th>
+                                <th class="text-primary text-nowrap p-2 col-1 d-none d-md-table-cell">
+                                    {{ icon_subject.상황|safe }} 상황
+                                </th>
+                                <th class="text-primary text-nowrap p-2 col-1">PSAT 평균</th>
+                                <th class="text-primary text-nowrap p-2 col-1 d-none d-md-table-cell">
+                                    {{ icon_subject.헌법|safe }} 헌법
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% if page_obj %}
+                                {% for obj in page_obj %}
+                                    <tr class="text-center">
+                                        {% if obj.staff %}
+                                            {% if user.is_staff %}
+
+                                                {% partialdef exam_round inline=True %} {# exam_round partial #}
+                                                    <td class="text-nowrap p-2">
+                                                        {% if obj.student %}
+                                                            <a href="{{ obj.detail_url }}" hx-boost="true">
+                                                                제{{ obj.round }}회
+                                                            </a>
+                                                        {% else %}
+                                                            제{{ obj.round }}회
+                                                        {% endif %}
+                                                    </td>
+                                                {% endpartialdef exam_round %}
+
+                                                {% partialdef exam_info inline=True %} {# exam_info partial #}
+                                                    <td class="text-nowrap p-2">
+                                                        {% if user.is_authenticated %}
+                                                            {% if obj.student %}
+                                                                <a href="{{ obj.detail_url }}" hx-boost="true">
+                                                                    {{ obj.student.serial }}
+                                                                </a>
+                                                                {% partialdef delete_student inline=True %} {# delete_student partial #}
+                                                                    {% if user.is_staff %}
+                                                                        <a class="badge rounded-pill text-bg-danger"
+                                                                           hx-confirm="수험 정보를 삭제하시겠습니까?"
+                                                                           href=""
+                                                                           hx-post="">
+{#                                                                           href="{% url 'prime:student_reset' obj.year obj.round %}"#}
+{#                                                                           hx-post="{% url 'prime:student_reset' obj.year obj.round %}">#}
+                                                                            삭제
+                                                                        </a>
+                                                                    {% endif %}
+                                                                {% endpartialdef delete_student %}
+                                                            {% else %}
+                                                                {% partialdef input_button inline=True %} {# input_button partial #}
+                                                                    <a class="badge rounded-pill text-bg-warning" href=""
+                                                                       hx-get=""
+{#                                                                       hx-get="{% url 'prime:student_connect_modal' obj.year obj.round %}"#}
+                                                                       hx-target="#modalContainer" hx-swap="innerHTML"
+                                                                       hx-push-url="false"
+                                                                       data-bs-toggle="modal" data-bs-target="#modalContainer">
+                                                                        입력
+                                                                    </a>
+                                                                {% endpartialdef input_button %}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {% with class='warning' text='입력' %}
+                                                                {% partialdef login_modal inline=True %}
+                                                                    <a class="badge rounded-pill text-bg-{{ class }}"
+                                                                       hx-get="" href=""
+{#                                                                       hx-get="{% url 'account_login_modal' %}" href=""#}
+                                                                       hx-target="#modalContainer" hx-swap="innerHTML" hx-push-url="false"
+                                                                       data-bs-toggle="modal" data-bs-target="#modalContainer">
+                                                                        {{ text }}
+                                                                    </a>
+                                                                {% endpartialdef %}
+                                                            {% endwith %}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-nowrap p-2">
+                                                        {% if user.is_authenticated %}
+                                                            {% if obj.student %}
+                                                                <a href="{{ obj.detail_url }}" hx-boost="true">
+                                                                    {{ obj.student.department_name }}
+                                                                </a>
+                                                                {% partial delete_student %}
+                                                            {% else %}
+                                                                {% partial input_button %}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {% with class='warning' text='입력' %}
+                                                                {% partial login_modal %}
+                                                            {% endwith %}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-nowrap p-2">
+                                                        {% if user.is_authenticated %}
+                                                            {% if obj.student %}
+                                                                <a class="badge rounded-pill text-bg-success" hx-boost="true"
+                                                                   href="{{ obj.detail_url }}">
+                                                                    확인
+                                                                </a>
+                                                            {% else %}
+                                                                <a class="badge rounded-pill text-bg-danger"
+                                                                   hx-get="" href=""
+{#                                                                   hx-get="{% url 'prime:no_student_modal' obj.year obj.round %}" href=""#}
+                                                                   hx-target="#modalContainer" hx-swap="innerHTML" hx-push-url="false"
+                                                                   data-bs-toggle="modal" data-bs-target="#modalContainer">
+                                                                    미응시
+                                                                </a>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {% with class='danger' text='미응시' %}
+                                                                {% partial login_modal %}
+                                                            {% endwith %}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="d-none d-md-table-cell">
+                                                        {% if user.is_authenticated %}
+                                                            {{ obj.student_score.score_eoneo|floatformat:1 }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="d-none d-md-table-cell">
+                                                        {% if user.is_authenticated %}
+                                                            {{ obj.student_score.score_jaryo|floatformat:1 }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="d-none d-md-table-cell">
+                                                        {% if user.is_authenticated %}
+                                                            {{ obj.student_score.score_sanghwang|floatformat:1 }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if user.is_authenticated %}
+                                                            {{ obj.student_score.score_psat_avg|floatformat:1 }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="d-none d-md-table-cell">
+                                                        {% if user.is_authenticated %}
+                                                            {{ obj.student_score.score_heonbeob|floatformat:1 }}
+                                                        {% endif %}
+                                                    </td>
+                                                {% endpartialdef exam_info %}
+
+                                            {% endif %}
+                                        {% else %}
+                                            {% partial exam_round %}
+                                            {% if user.is_staff %}
+                                                {% partial exam_info %}
+                                            {% else %}
+                                                {% if current_time > obj.opened_at %}
+                                                    {% partial exam_info %}
+                                                {% else %}
+                                                    <td class="text-nowrap p-2" colspan="8">
+                                                        <a class="badge rounded-pill text-bg-danger" href=""
+                                                           hx-get=""
+{#                                                           hx-get="{% url 'prime:no_open_modal' obj.year obj.round %}"#}
+                                                           hx-target="#modalContainer" hx-swap="innerHTML"
+                                                           hx-push-url="false"
+                                                           data-bs-toggle="modal" data-bs-target="#modalContainer">
+                                                            성적 공개 일시 : {{ obj.opened_at|date:'n/d(D) H:i' }}
+                                                        </a>
+                                                    </td>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    {% /responsive_table %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">시험 일정</div>
+
+                <div class="card-body">
+                    <div class="container d-none d-lg-block text-center p-0">
+                        <img src="" class="mw-100" alt="Schedule"/>
+                    </div>
+                    <div class="container d-lg-none text-center p-0">
+                        <img src="" class="mw-100" alt="Schedule"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock main %}

@@ -103,20 +103,20 @@
                     <td class="td-no-border">
                         {% if answer.ans_list %}
                             {% if answer.ans == 1234 or answer.ans == 12345 %}
-                                <span data-number="{{ answer.no }}"
+                                <span data-number="{{ forloop.counter }}"
                                       class="badge rounded-pill text-bg-secondary">
                                     전체 정답
                                 </span>
                             {% else %}
                                 {% for ans in answer.ans_number_list %}
-                                    <button data-number="{{ answer.no }}"
+                                    <button data-number="{{ forloop.counter }}"
                                             class="btn btn-circle btn-sm fs-6 my-2 btn-success">
                                         {{ ans }}
                                     </button>
                                 {% endfor %}
                             {% endif %}
                         {% else %}
-                            <button data-number="{{ answer.no }}"
+                            <button data-number="{{ forloop.counter }}"
                                     class="btn btn-circle btn-sm fs-6 mx-1 my-2 btn-success">
                                 {{ answer.ans }}
                             </button>
@@ -130,8 +130,8 @@
             {% for answer in answer_official %}
                 {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                     <td>
-                        <div data-number="{{ answer.no }}" class="fw-bold text-success">
-                            <div id="{{ prefix }}_correct_{{ answer.no }}"
+                        <div data-number="{{ forloop.counter }}" class="fw-bold text-success">
+                            <div id="{{ prefix }}_correct_{{ forloop.counter }}"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
                                 {{ answer.rate_correct|floatformat:0 }}
                             </div>
@@ -149,12 +149,12 @@
             {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                 <td class="td-no-border">
                     {% if not exam.is_answer_official_opened %}
-                        <button data-number="{{ answer.no }}"
+                        <button data-number="{{ forloop.counter }}"
                                 class="btn btn-circle btn-sm btn-primary fs-6 mx-1 my-2">
                             {{ answer.ans }}
                         </button>
                     {% else %}
-                        <button data-number="{{ answer.no }}"
+                        <button data-number="{{ forloop.counter }}"
                                 class="btn btn-circle btn-sm fs-6 mx-1 my-2 {% if answer.result_real == 'O' %}btn-success{% else %}btn-danger{% endif %}">
                             {{ answer.ans }}
                         </button>
@@ -169,16 +169,16 @@
             {% if forloop.counter > loop_min and forloop.counter <= loop_min|add:loop_counter %}
                 <td>
                     {% if not exam.is_answer_official_opened %}
-                        <div data-number="{{ answer.no }}" class="fw-bold text-primary">
-                            <div id="{{ prefix }}_selection_{{ answer.no }}_before"
+                        <div data-number="{{ forloop.counter }}" class="fw-bold text-primary">
+                            <div id="{{ prefix }}_selection_{{ forloop.counter }}_before"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
                                 {{ answer.rate_selection|floatformat:0 }}
                             </div>
                         </div>
                     {% else %}
-                        <div data-number="{{ answer.no }}"
+                        <div data-number="{{ forloop.counter }}"
                              class="fw-bold {% if answer.result_real == 'O' %}text-success{% else %}text-danger{% endif %}">
-                            <div id="{{ prefix }}_selection_{{ answer.no }}_after"
+                            <div id="{{ prefix }}_selection_{{ forloop.counter }}_after"
                                  class="htmx-fade-up-in delay-{{ forloop.counter|digit_of_one }}">
                                 {{ answer.rate_selection|floatformat:0 }}
                             </div>

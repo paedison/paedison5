@@ -1,0 +1,21 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block head_title %}{{ sub_title }}{% endblock %}
+{% block page_image %}
+<meta property="og:image" content="{% static 'image/predict/cover_psat_og.jpg' %}"/>
+{% endblock page_image %}
+
+{% block layout %}
+    {% include 'a_score/_includes/_hero.html' %}
+{#    <hero id="hero" hx-swap-oob="true"></hero>#}
+    <content id="content"
+             class="htmx-fade-in htmx-fade-out">
+        <filter id="aside-group" hx-swap-oob="true"></filter>
+
+        <main id="main" class="!tw-my-4">
+            {% block main %}{% endblock main %}
+        </main>
+    </content>
+{% endblock %}
+

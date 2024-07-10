@@ -1,4 +1,5 @@
 import csv
+import json
 import traceback
 
 import django.db.utils
@@ -22,6 +23,15 @@ def create_instance_get_messages(file_name: str, model: any) -> dict:
         fields = list(csv_data.fieldnames)
         for row in csv_data:
             row: dict
+            for key, value in row.items():
+                value: str
+                if value[:1] == '{':
+                    try:
+                        row[key] = json.loads(value)
+                    except json.JSONDecodeError as e:
+                        print(row['id'])
+                        print(f'JSONDecodeError: {e}')
+                        print(f"Problematic JSON: {row[key]}")
             if row['id']:
                 try:
                     instance = model.objects.get(id=row['id'])

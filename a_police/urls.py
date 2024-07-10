@@ -1,6 +1,6 @@
 from django.urls import path, include
 
-from .views import *
+from a_police.views.problem_views import *
 
 app_name = 'police'
 

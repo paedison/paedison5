@@ -1,0 +1,50 @@
+{% load static %}
+
+<hero id="hero"
+      hx-swap-oob="true"
+      class="tw-mt-[60px] tw-grid tw-bg-white tw-text-center tw-bg-cover tw-z-10 tw-relative">
+    <div class="tw-col-start-1 tw-row-start-1 tw-py-24 tw-px-10">
+        <div class="md:tw-px-10 tw-mx-auto tw-flex tw-flex-col tw-items-center">
+            <img src="{% static 'image/predict/cover_psat.jpg' %}" alt="Title"/>
+            <img src="{% static 'image/predict/message-1.jpg' %}" alt="Message"/>
+            <img src="{% static 'image/predict/message-2.jpg' %}" alt="Message"/>
+        </div>
+        <div class="md:tw-px-10 tw-mx-auto tw-flex tw-items-center tw-justify-center mt-4">
+            <a class="btn btn-outline-danger me-4" target="_blank"
+               href="https://renew.primeedunet.com/psat/product/prereg/group/108">
+                모의고사 신청
+            </a>
+            {% if user.is_staff %}
+                {% partialdef predict_score inline=True %}
+                    {% if student %}
+                        <a class="btn btn-outline-primary" hx-target="#main"
+                           href="" hx-boost="true">
+{#                           href="{% url 'predict:student_create' %}" hx-boost="true">#}
+                            성적 예측하기
+                        </a>
+                    {% else %}
+                        <a class="btn btn-outline-primary" hx-target="#main"
+                           href="" hx-boost="true">
+{#                           href="{% url 'predict:index' %}" hx-boost="true">#}
+                            성적 예측하기
+                        </a>
+                    {% endif %}
+                {% endpartialdef %}
+            {% else %}
+                {% if current_time > predict_opened_at %}
+                    {% partial predict_score %}
+                {% else %}
+                    <div class="col-6 text-sm-start">
+                        <a class="btn btn-outline-primary"
+                           hx-get="" href=""
+{#                           hx-get="{% url 'prime:no_predict_open_modal' %}" href=""#}
+                           hx-target="#modalContainer" hx-swap="innerHTML" hx-push-url="false"
+                           data-bs-toggle="modal" data-bs-target="#modalContainer">
+                            성적 예측하기
+                        </a>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</hero>
